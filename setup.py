@@ -34,6 +34,7 @@ setup(
         'ralph>=2.0.0rc1',
         'django-mptt==0.5.5',
         'xlrd==0.9.2',
+        'inkpy==0.0.1-alpha',
     ],
     entry_points={
         'django.pluggable_app': [
