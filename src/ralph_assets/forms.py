@@ -601,13 +601,6 @@ class DependencyAssetForm(DependencyForm):
                 SHOW,
             ),
             Dependency(
-                'niw',
-                'barcode',
-                dependency_conditions.NotEmpty(),
-                CLONE,
-                page_load_update=False,
-            ),
-            Dependency(
                 'owner',
                 'user',
                 dependency_conditions.NotEmpty(),
