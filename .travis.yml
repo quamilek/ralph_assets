@@ -16,3 +16,6 @@ script:
   make test-with-coveralls
 after_success:
   coveralls
+services: 
+    - redis
+    - ralph rqworker default reports
