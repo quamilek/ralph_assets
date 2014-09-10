@@ -27,6 +27,7 @@ from ralph_assets.forms import (
 from ralph_assets.models import Asset, AssetModel, PartInfo
 from ralph_assets.models_history import AssetHistoryChange
 from ralph_assets.models_assets import AssetType
+from ralph_assets.models_sam import Licence
 from ralph_assets.views.base import AssetsBase
 from ralph_assets.views.utils import (
     _create_device,
@@ -271,7 +272,7 @@ class EditDevice(AssetsBase):
                 for licence in self.asset_form.cleaned_data.get(
                     'licences', []
                 ):
-                    self.asset.licence_set.add(licence)
+                    Licence.objects.get(id=licence).assign(self.asset)
                 self.asset.supports.clear()
                 for support in self.asset_form.cleaned_data.get(
                     'supports', []

@@ -221,7 +221,10 @@ class LicenceFormView(LicenceBaseView):
             if licence.asset_type is None:
                 licence.asset_type = MODE2ASSET_TYPE[self.mode]
             licence.save()
-            self.form.save_m2m()
+            # manually save attachments, users, assets
+            # save_m2m() doesn't support models where in many-to-many field
+            # is specified `through` attr
+            # self.form.save_m2m()
             messages.success(self.request, self.message)
             return HttpResponseRedirect(licence.url)
         except ValueError:

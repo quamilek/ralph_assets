@@ -615,6 +615,7 @@ class TestBackOfficeDevicesView(TestDevicesView, BaseViewsTest):
             'cache_version',
             'device',
             'licence',
+            'licenceasset',
             'created',
             'modified',
             'source_device',
@@ -803,12 +804,12 @@ class TestLicencesView(BaseViewsTest):
         number_of_users = 5
         number_of_assets = 5
         licences = [LicenceFactory() for idx in xrange(5)]
-        licences[0].assets.add(
-            *[BOAssetFactory() for _ in xrange(number_of_assets)]
-        )
-        licences[0].users.add(
-            *[UserFactory() for _ in xrange(number_of_users)]
-        )
+        for _ in xrange(number_of_assets):
+            asset = BOAssetFactory()
+            licences[0].assign(asset)
+        for _ in xrange(number_of_users):
+            user = UserFactory()
+            licences[0].assign(user)
         url = reverse('count_licences')
         url += '?id={}'.format(licences[0].id)
         response = self.client.ajax_get(url)
@@ -828,13 +829,13 @@ class TestLicencesView(BaseViewsTest):
             'number_bought', flat=True)
         )
         for lic in licences:
-            lic.assets.add(
-                *[BOAssetFactory() for _ in xrange(5)]
-            )
+            for _ in xrange(5):
+                asset = BOAssetFactory()
+                lic.assign(asset)
         for lic in licences:
-            lic.users.add(
-                *[UserFactory() for _ in xrange(5)]
-            )
+            for _ in xrange(5):
+                user = UserFactory()
+                lic.assign(user)
         url = reverse('count_licences')
         response = self.client.ajax_get(url)
         self.assertEqual(response.status_code, 200)

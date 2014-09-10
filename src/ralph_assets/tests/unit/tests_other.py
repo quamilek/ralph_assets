@@ -119,9 +119,9 @@ class TestExportRelations(TestCase):
         )
 
     def test_licences_rows(self):
-        self.licence1.assets.add(self.asset)
-        self.licence1.users.add(self.user)
-        self.licence1.users.add(self.owner)
+        self.licence1.assign(self.asset)
+        self.licence1.assign(self.user)
+        self.licence1.assign(self.owner)
         rows = [item for item in get_licences_rows()]
 
         self.assertEqual(
@@ -160,9 +160,9 @@ class TestExportRelations(TestCase):
         )
 
     def test_licences_rows_only_assigned(self):
-        self.licence1.assets.add(self.asset)
-        self.licence1.users.add(self.user)
-        self.licence1.users.add(self.owner)
+        self.licence1.assign(self.asset)
+        self.licence1.assign(self.user)
+        self.licence1.assign(self.owner)
         rows = [item for item in get_licences_rows(only_assigned=True)]
 
         self.assertEqual(
