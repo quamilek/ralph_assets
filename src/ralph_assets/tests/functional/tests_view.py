@@ -801,15 +801,16 @@ class TestLicencesView(BaseViewsTest):
         self.assertEqual(response.status_code, 302)
 
     def test_licence_count_simple(self):
+        licences_per_object = 1
         number_of_users = 5
         number_of_assets = 5
         licences = [LicenceFactory() for idx in xrange(5)]
         for _ in xrange(number_of_assets):
             asset = BOAssetFactory()
-            licences[0].assign(asset)
+            licences[0].assign(asset, licences_per_object)
         for _ in xrange(number_of_users):
             user = UserFactory()
-            licences[0].assign(user)
+            licences[0].assign(user, licences_per_object)
         url = reverse('count_licences')
         url += '?id={}'.format(licences[0].id)
         response = self.client.ajax_get(url)
@@ -817,8 +818,8 @@ class TestLicencesView(BaseViewsTest):
         self.assertEqual(
             json.loads(response.content),
             {
-                'used_by_users': number_of_users,
-                'used_by_assets': number_of_assets,
+                'used_by_users': number_of_users * licences_per_object,
+                'used_by_assets': number_of_assets * licences_per_object,
                 'total': licences[0].number_bought,
             },
         )
@@ -865,6 +866,20 @@ class TestLicencesView(BaseViewsTest):
             add_license_url, license_data, follow=True,
         )
         self.assertContains(response, '1 licences added')
+
+    def test_licence_assign_licence(self):
+        url = reverse('assign_licence')
+        response = self.client.ajax_post(url, data={'a': 1})
+        print(response)  # DETELE THIS
+        self.assertEqual(response.status_code, 200)
+        # self.assertEqual(
+        #     json.loads(response.content),
+        #     {
+        #         'used_by_users': number_of_users * licences_per_object,
+        #         'used_by_assets': number_of_assets * licences_per_object,
+        #         'total': licences[0].number_bought,
+        #     },
+        # )
 
 
 class TestSupportsView(BaseViewsTest):

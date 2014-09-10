@@ -221,7 +221,7 @@ class Licence(
             name.lower(): obj,
             'licence': self,
         }
-        assigned_licence, created = Model.objects.get_or_create(**kwargs)
+        assigned_licence, _ = Model.objects.get_or_create(**kwargs)
         assigned_licence.quantity = quantity
         assigned_licence.save(update_fields=['quantity'])
 

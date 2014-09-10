@@ -16,6 +16,7 @@ from django.core.urlresolvers import reverse
 from django.db.models import Sum, Count
 from django.http import HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
+from django.views.generic import View
 
 from ralph_assets.forms_sam import (
     SoftwareCategorySearchForm,
@@ -354,3 +355,9 @@ class CountLicence(AjaxMixin, JsonResponseMixin, GenericSearch):
             used_by_users=Sum('users_count'),
         ))
         return self.render_json_response(summary)
+
+
+class AssignLicence(AjaxMixin, JsonResponseMixin, View):
+
+    def post(self, request, *args, **kwargs):
+        return self.render_json_response({})

@@ -37,6 +37,7 @@ from ralph_assets.views.ajax import CategoryDependencyView, ModelDependencyView
 from ralph_assets.views.data_import import XlsUploadView
 from ralph_assets.views.sam import (
     AddLicence,
+    AssignLicence,
     CountLicence,
     DeleteLicence,
     EditLicence,
@@ -187,9 +188,14 @@ urlpatterns = patterns(
         name='edit_licence',
     ),
     url(
-        r'sam/count_licences/$',
+        r'sam/count/$',
         login_required(CountLicence.as_view()),
         name='count_licences',
+    ),
+    url(
+        r'sam/assign/$',
+        login_required(AssignLicence.as_view()),
+        name='assign_licence',
     ),
     url(
         r'support/$',
