@@ -28,9 +28,9 @@ from ralph_assets.models_assets import (
     AssetOwner,
     AssetType,
     Attachment,
+    AttachmentMixin,
     BudgetInfo,
     CreatableFromString,
-    LicenseAndAsset,
     Service,
 )
 from ralph_assets.models_util import (
@@ -62,7 +62,7 @@ class SoftwareCategory(Named, CreatableFromString):
 
 
 class Licence(
-    LicenseAndAsset,
+    AttachmentMixin,
     MPTTModel,
     TimeTrackable,
     WithConcurrentGetOrCreate,

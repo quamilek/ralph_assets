@@ -43,7 +43,7 @@ class SupportStatus(Choices):
 class Support(
     EditorTrackable,
     Named.NonUnique,
-    models_assets.SupportAndAsset,
+    models_assets.AttachmentMixin,
     SoftDeletable,
     SavingUser,
     TimeTrackable,

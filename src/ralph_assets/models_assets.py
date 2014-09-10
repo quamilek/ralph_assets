@@ -75,15 +75,7 @@ def get_user_iso3_country_name(user):
     return iso3_country_name
 
 
-class LicenseAndAsset(object):
-
-    def latest_attachments(self):
-        attachments = self.attachments.all().order_by('-created')
-        for attachment in attachments:
-            yield attachment
-
-
-class SupportAndAsset(object):
+class AttachmentMixin(object):
 
     def latest_attachments(self):
         attachments = self.attachments.all().order_by('-created')
@@ -397,7 +389,7 @@ class AssetLastHostname(models.Model):
 
 
 class Asset(
-    LicenseAndAsset,
+    AttachmentMixin,
     TimeTrackable,
     EditorTrackable,
     SavingUser,
