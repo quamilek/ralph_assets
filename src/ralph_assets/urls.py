@@ -33,7 +33,11 @@ from ralph_assets.views.asset import (
     DeleteAsset,
     HistoryAsset,
 )
-from ralph_assets.views.ajax import CategoryDependencyView, ModelDependencyView
+from ralph_assets.views.ajax import (
+    CategoryDependencyView,
+    ModelDependencyView,
+    MultiFormRowAjaxView,
+)
 from ralph_assets.views.data_import import XlsUploadView
 from ralph_assets.views.sam import (
     AddLicence,
@@ -260,5 +264,11 @@ urlpatterns = patterns(
         r'reports/(?P<mode>\S+)/(?P<slug>\S+)$',
         login_required(ReportDetail.as_view()),
         name='report_detail',
+    ),
+
+    url(
+        r'ajax-view/multi-form-row/$',
+        login_required(MultiFormRowAjaxView.as_view()),
+        name='multi_form_row',
     ),
 )

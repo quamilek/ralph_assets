@@ -88,6 +88,11 @@
 
   </div>
 </div>
+<div class="row-fluid">
+  <div class="span6">
+    {% block multi_widget %}{% endblock %}
+  </div>
+</div>
 
 {% include 'assets/attachment_deletion.html' with attachment_parent=asset parent_name='asset'%}
 

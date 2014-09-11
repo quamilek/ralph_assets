@@ -2,11 +2,20 @@ $(document).ready(function () {
     var FORM_COUNT = parseInt($('input[name="form-TOTAL_FORMS"]').val());
 
     $('.add_row').on("click", function () {
-        var row = $('.form-split tbody tr').last().clone(true, true);
-        cleanup_fields(row);
-        row.appendTo(".form-split tbody");
+        var ajax_fetch_url = $(this).data('ajax-fetch-url');
+        if (ajax_fetch_url){
+
+            var row =
+            $.get(ajax_fetch_url + '?replace_id=' + FORM_COUNT, function(template) {
+                    $(".form-split tbody").append(template);
+            });
+        } else {
+            var row = $('.form-split tbody tr').last().clone(true, true);
+            cleanup_fields(row);
+            row.appendTo(".form-split tbody");
+        }
         change_form_counter('add');
-        renumber_forms();
+        // renumber_forms();
         return false;
     });
 
@@ -57,7 +66,6 @@ $(document).ready(function () {
             });
 
         });
-
         $('.ordinal').each(function (i, elem) {
             $(elem).html(i + 1);
         });

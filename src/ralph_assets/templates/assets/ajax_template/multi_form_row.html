@@ -1,0 +1,15 @@
+{% for form in formset %}
+<tr>
+    <td style="vertical-align:middle" class="ordinal" data-no="{{ replace_id }}">
+      {{replace_id}}
+    </td>
+    {% for field in form %}
+      <td class="control-group {% if field.errors %} error{% endif %}" style="vertical-align:middle">
+        {{ field }}
+        {% if field.errors %}
+          <span class="help-inline">{% for error in field.errors %}{{ error }} {% endfor %}</span>
+        {% endif %}
+      </td>
+    {% endfor %}
+</tr>
+{% endfor %}

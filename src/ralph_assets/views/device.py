@@ -156,6 +156,10 @@ class EditDevice(SubmoduleModeMixin, AssetsBase):
         status_history = AssetHistoryChange.objects.all().filter(
             asset=kwargs.get('asset_id'), field_name__exact='status'
         ).order_by('-date')
+        from ralph_assets.forms_multi import XXXForm
+        MultiAssignFormSet = formset_factory(form=XXXForm, extra=2)
+        initial = {}
+        multi_licence_formset = MultiAssignFormSet(initial=initial)
         ret.update({
             'asset_form': self.asset_form,
             'additional_info': self.additional_info,
@@ -166,7 +170,11 @@ class EditDevice(SubmoduleModeMixin, AssetsBase):
             'parts': self.parts,
             'asset': self.asset,
             'history_link': self.get_history_link(),
+            'xxx_form': [XXXForm(prefix='1'), XXXForm(prefix='2')],
+            'xxx_empty_form': XXXForm(),
+            'xxx_formset': multi_licence_formset,
         })
+        # import ipdb; ipdb.set_trace()
         return ret
 
     def _update_additional_info(self, modifier):
