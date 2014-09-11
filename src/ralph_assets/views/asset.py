@@ -8,24 +8,16 @@ from __future__ import unicode_literals
 import logging
 
 from django.contrib import messages
-from django.core.paginator import Paginator
-from django.core.urlresolvers import reverse
 from django.db import transaction
-from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 
 from ralph_assets.models import Asset
-from ralph_assets.models_history import AssetHistoryChange
 from ralph_assets.models_assets import AssetType
 from ralph_assets.views.base import AssetsBase, BulkEditBase, get_return_link
 from ralph_assets.views.search import _AssetSearch, AssetSearchDataTable
 from ralph_assets.views.utils import _move_data, _update_office_info
 from ralph.util.reports import Report
-
-
-MAX_PAGE_SIZE = 65535
-HISTORY_PAGE_SIZE = 25
 
 
 logger = logging.getLogger(__name__)
@@ -68,53 +60,6 @@ class DeleteAsset(AssetsBase):
             # key-constraints issues (sn/barcode) - to be resolved.
             self.asset.delete_with_info()
             return HttpResponseRedirect(self.back_to)
-
-
-class HistoryAsset(AssetsBase):
-    template_name = 'assets/history.html'
-
-    def get_context_data(self, **kwargs):
-        query_variable_name = 'history_page'
-        ret = super(HistoryAsset, self).get_context_data(**kwargs)
-        asset_id = kwargs.get('asset_id')
-        asset = Asset.admin_objects.get(id=asset_id)
-        history = AssetHistoryChange.objects.filter(
-            Q(asset_id=asset.id) |
-            Q(device_info_id=getattr(asset.device_info, 'id', 0)) |
-            Q(part_info_id=getattr(asset.part_info, 'id', 0)) |
-            Q(office_info_id=getattr(asset.office_info, 'id', 0))
-        ).order_by('-date')
-        status = bool(self.request.GET.get('status', ''))
-        if status:
-            history = history.filter(field_name__exact='status')
-        try:
-            page = int(self.request.GET.get(query_variable_name, 1))
-        except ValueError:
-            page = 1
-        if page == 0:
-            page = 1
-            page_size = MAX_PAGE_SIZE
-        else:
-            page_size = HISTORY_PAGE_SIZE
-        history_page = Paginator(history, page_size).page(page)
-        if asset.get_data_type() == 'device':
-            url_name = 'device_edit'
-        else:
-            url_name = 'part_edit'
-        object_url = reverse(
-            url_name, kwargs={'asset_id': asset.id, 'mode': self.mode},
-        )
-        ret.update({
-            'history': history,
-            'history_page': history_page,
-            'status': status,
-            'query_variable_name': query_variable_name,
-            'object': asset,
-            'object_url': object_url,
-            'title': _('History asset'),
-            'show_status_button': True,
-        })
-        return ret
 
 
 class AssetSearch(Report, AssetSearchDataTable):

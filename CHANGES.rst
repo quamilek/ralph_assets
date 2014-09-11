@@ -1,6 +1,10 @@
 Change Log
 ----------
 
+DEV
+~~~
+* Refactored history mechanism (more flexible)
+
 2.2.0
 ~~~~~~~~~
 Released on August 19, 2014

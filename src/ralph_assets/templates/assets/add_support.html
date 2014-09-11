@@ -1,7 +1,6 @@
 {% extends 'assets/base.html' %}
-{% load assets %}
-{% load bob %}
-{% load i18n %}
+{% load assets bob i18n history_tags %}
+
 {% block content %}
 <div class="row-fluid">
     <h3>{% block form_title %}{{caption}}{% endblock %}</h3>
@@ -20,13 +19,7 @@
     </div>
     <div class="span6">
       {% include 'assets/attachment_table.html' with attachment_parent=support parent_name='support' %}
-      {% if support %}
-        <h6>
-          <a href="{% url support_history support.id %}">
-            {% trans "Support history"%}
-          </a>
-        </h6>
-      {% endif %}
+      {% short_history support %}
     </div>
   </div>
   <div class="row-fluid">

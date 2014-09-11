@@ -31,7 +31,6 @@ from ralph_assets.views.asset import (
     AssetSearch,
     AssetBulkEdit,
     DeleteAsset,
-    HistoryAsset,
 )
 from ralph_assets.views.ajax import CategoryDependencyView, ModelDependencyView
 from ralph_assets.views.data_import import XlsUploadView
@@ -41,7 +40,6 @@ from ralph_assets.views.sam import (
     CountLicence,
     DeleteLicence,
     EditLicence,
-    HistoryLicence,
     LicenceList,
     LicenceBulkEdit,
     SoftwareCategoryList,
@@ -51,7 +49,6 @@ from ralph_assets.views.support import (
     AddSupportView,
     EditSupportView,
     DeleteSupportView,
-    HistorySupport,
 )
 from ralph_assets.views.invoice_report import (
     AssetInvoiceReport,
@@ -122,12 +119,6 @@ urlpatterns = patterns(
     url(r'ajax/dependencies/model/$',
         ModelDependencyView.as_view(),
         name='model_dependency_view'),
-    url(r'(?P<mode>(back_office|dc))/history/device/(?P<asset_id>[0-9]+)/$',
-        login_required(HistoryAsset.as_view()),
-        name='device_history'),
-    url(r'(?P<mode>(back_office|dc))/history/part/(?P<asset_id>[0-9]+)/$',
-        login_required(HistoryAsset.as_view()),
-        name='part_history'),
     url(r'(?P<mode>(back_office|dc))/bulkedit/$',
         login_required(AssetBulkEdit.as_view()),
         name='bulkedit'),
@@ -213,11 +204,6 @@ urlpatterns = patterns(
         name='edit_support',
     ),
     url(
-        r'support/history/(?P<support_id>[0-9]+)/$',
-        login_required(HistorySupport.as_view()),
-        name='support_history',
-    ),
-    url(
         r'support/delete/$',
         login_required(DeleteSupportView.as_view()),
         name='delete_support',
@@ -248,11 +234,6 @@ urlpatterns = patterns(
         name='user_view',
     ),
     url(
-        r'history/licence/(?P<licence_id>[0-9]+)/$',
-        login_required(HistoryLicence.as_view()),
-        name='licence_history',
-    ),
-    url(
         r'transition-history-file/(?P<history_id>[0-9]+)$',
         login_required(TransitionHistoryFileHandler.as_view()),
         name='transition_history_file',
@@ -266,5 +247,9 @@ urlpatterns = patterns(
         r'reports/(?P<mode>\S+)/(?P<slug>\S+)$',
         login_required(ReportDetail.as_view()),
         name='report_detail',
+    ),
+    url(
+        r'^history/',
+        include('ralph_assets.history.urls', app_name='history'),
     ),
 )

@@ -9,6 +9,8 @@ import logging
 import json
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.core.paginator import Paginator
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -27,6 +29,9 @@ from ralph_assets import forms as assets_forms
 from ralph_assets.models_assets import AssetType
 from ralph_assets.models import Asset
 from ralph_assets.forms import OfficeForm
+
+MAX_PAGE_SIZE = 65535
+HISTORY_PAGE_SIZE = 25
 
 logger = logging.getLogger(__name__)
 
@@ -336,3 +341,60 @@ class JsonResponseMixin(object):
         return HttpResponse(
             content, content_type=self.content_type, status=status
         )
+
+
+class PaginateMixin(object):
+    paginate_queryset = None
+    query_variable_name = 'page'
+
+    def get_paginate_queryset(self):
+        if not self.paginate_queryset:
+            raise Exception(
+                'Please specified ``paginate_queryset`` or '
+                'override ``get_paginate_queryset`` method.',
+            )
+        return self.paginate_queryset
+
+    def get_context_data(self, **kwargs):
+        context = super(PaginateMixin, self).get_context_data(**kwargs)
+        try:
+            page = int(self.request.GET.get(self.query_variable_name, 1))
+        except ValueError:
+            page = 1
+        if page == 0:
+            page = 1
+            page_size = MAX_PAGE_SIZE
+        else:
+            page_size = HISTORY_PAGE_SIZE
+        page_content = Paginator(
+            self.get_paginate_queryset(), page_size
+        ).page(page)
+        context.update({
+            'page_content': page_content,
+            'query_variable_name': self.query_variable_name,
+        })
+        return context
+
+
+class ContentTypeMixin(object):
+    """Helper for views. This mixin add model, content_type, object_id,
+    content_type_id."""
+    content_type_id_kwarg_name = 'content_type'
+    object_id_kwarg_name = 'object_id'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.content_type_id = kwargs[self.content_type_id_kwarg_name]
+        self.content_type = ContentType.objects.get(pk=self.content_type_id)
+        self.model = self.content_type.model_class()
+        self.object_id = kwargs[self.object_id_kwarg_name]
+        return super(ContentTypeMixin, self).dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super(ContentTypeMixin, self).get_context_data(**kwargs)
+        context.update({
+            'content_type': self.content_type,
+            'content_type_id': self.content_type_id,
+            'object_id': self.object_id,
+            'content_object': self.model.objects.get(pk=self.object_id),
+        })
+        return context

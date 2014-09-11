@@ -239,3 +239,30 @@ class TestApiAssets(TestCase):
             self.assertEqual(item['asset_id'], self.asset2.id)
             self.assertEqual(item['sn'], self.asset.sn)
             self.assertEqual(item['barcode'], self.asset.barcode)
+
+
+class TestModelHistory(TestCase):
+
+    def test_asset(self):
+        asset = AssetFactory(pk=123)
+        history = asset.get_history()
+        self.assertEqual(0, history.count())
+
+        asset.sn = '123'
+        asset.save()
+        self.assertEqual(1, history.count())
+
+        asset.sn = '1233'
+        asset.save()
+        self.assertEqual(2, history.count())
+
+        licence = LicenceFactory()
+        history = licence.get_history()
+        licence.save()
+        licence.save()
+        self.assertEqual(0, history.count())
+
+        for i in xrange(5):
+            asset = AssetFactory()
+            licence.assets.add(asset)
+            self.assertEqual(i + 1, history.count())

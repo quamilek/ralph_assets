@@ -22,6 +22,7 @@ from lck.django.common.models import (
 
 from ralph.discovery.models_util import SavingUser
 from ralph_assets import models_assets
+from ralph_assets.history.models import HistoryMixin
 from ralph_assets.models_assets import (
     AssetType,
     Asset,
@@ -41,6 +42,7 @@ class SupportStatus(Choices):
 
 
 class Support(
+    HistoryMixin,
     EditorTrackable,
     Named.NonUnique,
     models_assets.AttachmentMixin,

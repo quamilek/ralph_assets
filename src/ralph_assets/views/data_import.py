@@ -166,9 +166,7 @@ class XlsUploadView(SessionWizardView, AssetsBase):
             _, field_name = field_name.split('.', 1)
         else:
             Model = self.Model
-        field, _, _, _ = Model._meta.get_field_by_name(
-            field_name
-        )
+        field = Model._meta.get_field_by_name(field_name)[0]
         if not value:
             if isinstance(field, ManyToManyField):
                 return []

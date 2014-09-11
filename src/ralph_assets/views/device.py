@@ -25,7 +25,6 @@ from ralph_assets.forms import (
     SplitDevice,
 )
 from ralph_assets.models import Asset, AssetModel, PartInfo
-from ralph_assets.models_history import AssetHistoryChange
 from ralph_assets.models_assets import AssetType
 from ralph_assets.models_sam import Licence
 from ralph_assets.views.base import AssetsBase
@@ -154,19 +153,14 @@ class EditDevice(AssetsBase):
 
     def get_context_data(self, **kwargs):
         ret = super(EditDevice, self).get_context_data(**kwargs)
-        status_history = AssetHistoryChange.objects.all().filter(
-            asset=kwargs.get('asset_id'), field_name__exact='status'
-        ).order_by('-date')
         ret.update({
             'asset_form': self.asset_form,
             'additional_info': self.additional_info,
             'part_form': self.part_form,
             'form_id': 'edit_device_asset_form',
             'edit_mode': True,
-            'status_history': status_history,
             'parts': self.parts,
             'asset': self.asset,
-            'history_link': self.get_history_link(),
         })
         return ret
 
@@ -289,14 +283,6 @@ class EditDevice(AssetsBase):
                     self.request, self.asset_form.non_field_errors(),
                 )
         return super(EditDevice, self).get(*args, **kwargs)
-
-    def get_history_link(self):
-        asset_id = self.asset.id
-        url = reverse('device_history', kwargs={
-            'asset_id': asset_id,
-            'mode': self.mode,
-        })
-        return url
 
 
 class SplitDeviceView(AssetsBase):

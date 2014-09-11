@@ -35,7 +35,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_save
 from django.db.utils import DatabaseError
 from django.dispatch import receiver
 from django.template import Context, Template
@@ -44,6 +44,8 @@ from django.utils.translation import ugettext_lazy as _
 from ralph.business.models import Venture
 from ralph.discovery.models_device import Device, DeviceType
 from ralph.discovery.models_util import SavingUser
+from ralph_assets.history.models import HistoryMixin
+from ralph_assets.history.utils import field_changes
 from ralph_assets.models_util import WithForm
 from ralph_assets.utils import iso2_to_iso3
 
@@ -390,6 +392,7 @@ class AssetLastHostname(models.Model):
 
 class Asset(
     AttachmentMixin,
+    HistoryMixin,
     TimeTrackable,
     EditorTrackable,
     SavingUser,
@@ -892,3 +895,15 @@ class PartInfo(TimeTrackable, SavingUser, SoftDeletable):
 class ReportOdtSource(Named, SavingUser, TimeTrackable):
     slug = models.SlugField(max_length=100, unique=True, blank=False)
     template = models.FileField(upload_to=_get_file_path, blank=False)
+
+
+@receiver(pre_save, sender=Asset, dispatch_uid='ralph_assets.views.device')
+def device_hostname_assigning(sender, instance, raw, using, **kwargs):
+    """A hook for assigning ``hostname`` value when an asset is edited."""
+    if getattr(settings, 'ASSETS_AUTO_ASSIGN_HOSTNAME', None):
+        for field, orig, new in field_changes(instance):
+            status_desc = AssetStatus.in_progress.desc
+            if all((
+                field == 'status', orig != status_desc, new == status_desc
+            )):
+                instance._try_assign_hostname(commit=False)

@@ -27,16 +27,10 @@ class ACLInheritanceTest(TestCase):
             - redirections
         - assert if each view has ACLClass in mro
         """
-        from ralph_assets import urls
-        from ralph_assets.views.base import ACLGateway
-        excluded_urls_by_regexp = [
-            '^api/'  # skip it until api authen./author. is resolved
-        ]
-        for urlpattern in urls.urlpatterns:
-            if urlpattern._regex in excluded_urls_by_regexp:
-                continue
-            elif urlpattern.callback.func_name == 'RedirectView':
-                continue
+        def check(urlpattern):
+            """Check class view contains ACLGateway in __mro__. Class view
+            is from specified urlpattern.
+            """
             module_name = urlpattern._callback.__module__
             class_name = urlpattern._callback.__name__
             imported_module = __import__(module_name, fromlist=[class_name])
@@ -46,12 +40,28 @@ class ACLInheritanceTest(TestCase):
             )
             self.assertIn(ACLGateway, found_class.__mro__, msg)
 
+        from ralph_assets import urls
+        from ralph_assets.views.base import ACLGateway
+        excluded_urls_by_regexp = [
+            '^api/',  # skip it until api authen./author. is resolved
+        ]
+        for urlpattern in urls.urlpatterns:
+            if urlpattern._regex in excluded_urls_by_regexp:
+                continue
+            elif hasattr(urlpattern, 'url_patterns'):
+                for urlpattern in urlpattern.url_patterns:
+                    check(urlpattern)
+                continue
+            elif urlpattern.callback.func_name == 'RedirectView':
+                continue
+            check(urlpattern)
+
 
 class TestAssetModulePerms(TestCase):
     def setUp(self):
         self.mode = 'dc'
         self.assets_module_url = reverse(
-            'asset_search',  kwargs={'mode': self.mode}
+            'asset_search', kwargs={'mode': self.mode}
         )
 
     def test_superuser_has_access(self):
