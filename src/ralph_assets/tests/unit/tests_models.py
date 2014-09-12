@@ -14,7 +14,7 @@ from ralph.discovery.models_device import Device, DeviceType
 
 from ralph_assets.api_pricing import get_assets, get_asset_parts
 from ralph_assets.models_assets import PartInfo
-from ralph_assets.models_sam import LicenceAsset, Licence
+from ralph_assets.licences.models import LicenceAsset, Licence
 from ralph_assets.tests.utils.assets import (
     AssetSubCategoryFactory,
     AssetModelFactory,
@@ -262,7 +262,7 @@ class TestModelHistory(TestCase):
         licence.save()
         self.assertEqual(0, history.count())
 
+        history = asset.get_history()
         for i in xrange(5):
-            asset = AssetFactory()
-            licence.assets.add(asset)
-            self.assertEqual(i + 1, history.count())
+            licence.assign(asset, i + 1)
+            self.assertEqual(i + 3, history.count())

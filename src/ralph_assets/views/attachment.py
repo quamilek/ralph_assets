@@ -27,7 +27,7 @@ class BaseAttachment(AssetsBase):
     def get_back_url(self, parent_name):
         mapping = {
             'asset': 'dc',
-            'licence': 'licence_list',
+            'licence': 'licences_list',
             'support': 'support_list',
         }
         return reverse(mapping[parent_name])

@@ -32,7 +32,7 @@ from ralph_assets.models_assets import (
     Service,
     Warehouse,
 )
-from ralph_assets.models_sam import (
+from ralph_assets.licences.models import (
     Licence,
     LicenceType,
     SoftwareCategory,

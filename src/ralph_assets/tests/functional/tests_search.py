@@ -666,7 +666,7 @@ class TestSearchEngine(TestCase):
 
     def test_manufacturer_exact(self):
         urls = self.testing_urls.copy()
-        urls['license'] = reverse('licence_list')
+        urls['license'] = reverse('licences_list')
         field_name = 'manufacturer'
         for url in urls.values():
             self._check_results_length(url, field_name, '"Sony"', 1)
@@ -676,7 +676,7 @@ class TestSearchEngine(TestCase):
 
     def test_manufacturer_icontains(self):
         urls = self.testing_urls.copy()
-        urls['license'] = reverse('licence_list')
+        urls['license'] = reverse('licences_list')
         field_name = 'manufacturer'
         for url in urls.values():
             self._check_results_length(url, field_name, 'Sony', 2)

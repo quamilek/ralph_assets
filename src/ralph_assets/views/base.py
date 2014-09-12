@@ -229,7 +229,7 @@ class AssetsBase(ACLGateway, TemplateView):
             ),
             MenuItem(
                 fugue_icon='fugue-cheque',
-                href=reverse('licence_list'),
+                href=reverse('licences_list'),
                 label=_('Licences'),
                 name='licences',
             ),

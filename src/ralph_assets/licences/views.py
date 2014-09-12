@@ -17,7 +17,7 @@ from django.http import HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 from django.views.generic import View
 
-from ralph_assets.forms_sam import (
+from ralph_assets.licences.forms import (
     SoftwareCategorySearchForm,
     LicenceSearchForm,
     AddLicenceForm,
@@ -25,7 +25,7 @@ from ralph_assets.forms_sam import (
     BulkEditLicenceForm,
 )
 from ralph_assets.models_assets import MODE2ASSET_TYPE
-from ralph_assets.models_sam import (
+from ralph_assets.licences.models import (
     Licence,
     SoftwareCategory,
 )
@@ -216,7 +216,7 @@ class LicenceFormView(LicenceBaseView):
             if licence.asset_type is None:
                 licence.asset_type = MODE2ASSET_TYPE[self.mode]
             licence.save()
-            # manually save attachments, users, assets
+            # TODO: manually save attachments, users, assets
             # save_m2m() doesn't support models where in many-to-many field
             # is specified `through` attr
             # self.form.save_m2m()
@@ -252,7 +252,7 @@ class AddLicence(LicenceFormView):
             messages.success(self.request, '{} licences added'.format(len(
                 self.form.cleaned_data['niw'],
             )))
-            return HttpResponseRedirect(reverse('licence_list'))
+            return HttpResponseRedirect(reverse('licences_list'))
         else:
             return super(AddLicence, self).get(request, *args, **kwargs)
 
