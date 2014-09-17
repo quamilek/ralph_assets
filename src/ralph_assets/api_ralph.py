@@ -44,11 +44,7 @@ def get_asset_supports(asset):
     return supports
 
 
-def get_asset(device_id):
-    try:
-        asset = Asset.objects.get(device_info__ralph_device_id=device_id)
-    except Asset.DoesNotExist:
-        return
+def _create_asset_dict(asset):
     manufacturer_name = ''
     if asset.model.manufacturer:
         manufacturer_name = asset.model.manufacturer.name
@@ -58,6 +54,7 @@ def get_asset(device_id):
         asset_source = None
     return {
         'asset_id': asset.id,
+        'device_id': asset.device_info.ralph_device_id,
         'model': asset.model.name,
         'manufacturer': manufacturer_name,
         'source': asset_source,
@@ -95,6 +92,24 @@ def get_asset(device_id):
     }
 
 
+def get_asset(device_id):
+    try:
+        asset = Asset.objects.get(device_info__ralph_device_id=device_id)
+    except Asset.DoesNotExist:
+        return
+    return _create_asset_dict(asset)
+
+
+def get_asset_by_sn_or_barcode(identity):
+    try:
+        asset = Asset.objects.get(
+            Q(sn=identity) | Q(barcode=identity)
+        )
+    except Asset.DoesNotExist:
+        return
+    return _create_asset_dict(asset)
+
+
 def is_asset_assigned(asset_id, exclude_devices=[]):
     return Asset.objects.exclude(
         device_info__ralph_device_id__in=exclude_devices,
@@ -115,6 +130,7 @@ def assign_asset(device_id, asset_id=None):
     else:
         previous_asset.device_info.ralph_device_id = None
         previous_asset.device_info.save()
+        previous_asset.save()
     if asset_id:
         try:
             new_asset = Asset.objects.get(pk=asset_id)
@@ -122,6 +138,7 @@ def assign_asset(device_id, asset_id=None):
             return False
         new_asset.device_info.ralph_device_id = device_id
         new_asset.device_info.save()
+        new_asset.save()
     return True
 
 

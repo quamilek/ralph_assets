@@ -186,6 +186,7 @@
                         data.used_by_assets + ' licences assigned to assets.' +
                     '</div>'
                 );
+                window.scrollTo(0,0);
             })
             return false;
         });

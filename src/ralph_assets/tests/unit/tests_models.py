@@ -226,7 +226,7 @@ class TestApiAssets(TestCase):
             )
             self.assertEqual(item['sn'], self.asset.sn)
             self.assertEqual(item['barcode'], self.asset.barcode)
-            self.assertEqual(item['venture_id'], self.asset.venture.id)
+            self.assertEqual(item['venture_id'], None)
             self.assertEqual(item['is_blade'], self.category.is_blade)
             self.assertEqual(item['cores_count'], self.asset.cores_count)
 

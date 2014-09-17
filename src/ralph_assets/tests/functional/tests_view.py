@@ -14,13 +14,15 @@ from urllib import urlencode
 
 from dj.choices import Country
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import resolve, reverse
 from django.test import TestCase
 from django.test.utils import override_settings
+from ralph.discovery.tests.util import DeviceFactory
 
 from ralph_assets import models_assets
 from ralph_assets import models_support
 from ralph_assets.licences import models as models_sam
+from ralph_assets.models_assets import Asset, SAVE_PRIORITY
 from ralph_assets.tests.utils import (
     AjaxClient,
     AttachmentFactory,
@@ -30,14 +32,21 @@ from ralph_assets.tests.utils import (
 from ralph_assets.tests.utils import assets as assets_utils
 from ralph_assets.tests.utils import sam as sam_utils
 from ralph_assets.tests.utils.assets import (
-    BOAssetFactory,
     AssetFactory,
     AssetModelFactory,
+    BOAssetFactory,
     DCAssetFactory,
     WarehouseFactory,
 )
 from ralph_assets.tests.unit.tests_other import TestHostnameAssigning
 from ralph_assets.tests.utils.sam import LicenceFactory
+from ralph.cmdb.tests.utils import (
+    DeviceEnvironmentFactory,
+    ServiceCatalogFactory,
+)
+from ralph.business.models import Venture
+from ralph.discovery.models_device import Device, DeviceType
+from ralph.ui.tests.global_utils import login_as_su
 from ralph_assets.tests.utils.supports import (
     BOSupportFactory,
     DCSupportFactory,
@@ -68,6 +77,7 @@ def get_asset_data():
         'delivery_date': datetime.date(2013, 1, 7),
         'deprecation_end_date': datetime.date(2013, 7, 25),
         'deprecation_rate': 77,
+        'device_environment': assets_utils.DeviceEnvironmentFactory().id,
         'invoice_date': datetime.date(2009, 2, 23),
         'invoice_no': 'Invoice no #3',
         'loan_end_date': datetime.date(2013, 12, 29),
@@ -82,6 +92,7 @@ def get_asset_data():
         'provider_order_date': datetime.date(2014, 3, 17),
         'remarks': 'Remarks #3',
         'request_date': datetime.date(2014, 6, 9),
+        'service': assets_utils.ServiceCatalogFactory().id,
         'service_name': assets_utils.ServiceFactory().id,
         'source': models_assets.AssetSource.shipment.id,
         'status': models_assets.AssetStatus.new.id,
@@ -127,14 +138,16 @@ class BaseViewsTest(ClientMixin, TestCase):
         for check_string in check_strings:
             self.assertContains(response, check_string)
 
-    def get_object_form_data(self, url, form_name):
+    def get_object_form_data(self, url, forms_name):
         """
         Gets data from form *form_name* inside context under *url*.
         Useful when, eg. request data for add|edit asset is needed.
         """
         response = self.client.get(url)
-        form = response.context[form_name]
-        return form.__dict__['initial']
+        form_data = {}
+        for form_name in forms_name:
+            form_data.update(response.context[form_name].__dict__['initial'])
+        return form_data
 
 
 class TestDataDisplay(ClientMixin, TestCase):
@@ -160,36 +173,57 @@ class TestDataDisplay(ClientMixin, TestCase):
         self.assertEqual(self.asset, first_table_row)
 
 
-class TestDevicesView(ClientMixin, TestCase):
+class TestDevicesView(BaseViewsTest):
     """
     Parent class for common stuff for Test(DataCenter|BackOffice)DeviceView.
     """
+
+    asset_factory = None
 
     def setUp(self):
         self.login_as_superuser()
         self._visible_add_form_fields = [
             'asset', 'barcode', 'budget_info', 'category', 'delivery_date',
-            'deprecation_end_date', 'deprecation_rate', 'invoice_date',
-            'invoice_no', 'location', 'model', 'niw', 'order_no', 'owner',
-            'price', 'property_of', 'provider', 'provider_order_date',
-            'remarks', 'request_date', 'service_name', 'sn', 'source',
-            'status', 'task_url', 'type', 'user', 'warehouse',
+            'deprecation_end_date', 'deprecation_rate', 'device_environment',
+            'invoice_date', 'invoice_no', 'location', 'model', 'niw',
+            'order_no', 'owner', 'price', 'property_of', 'provider',
+            'provider_order_date', 'remarks', 'request_date', 'service',
+            'service_name', 'sn', 'source', 'status', 'task_url', 'type',
+            'user', 'warehouse',
         ]
         self._visible_edit_form_fields = self._visible_add_form_fields[:]
         self._visible_edit_form_fields.extend([
-            'supports_text', 'licences_text',
+            'licences_text', 'supports_text',
         ])
 
-    def get_asset_form_data(self):
+    def get_asset_form_data(self, factory_data=None):
         from ralph_assets import urls
-        asset = self.asset_factory()
+        if not factory_data:
+            factory_data = {}
+        asset = self.asset_factory(**factory_data)
         url = reverse('device_edit', kwargs={
             'mode': urls.normalize_asset_mode(asset.type.name),
             'asset_id': asset.id,
         })
-        form_data = self.get_object_form_data(url, 'asset_form')
+        form_data = self.get_object_form_data(url, ['asset_form'])
+        if asset.device_info:
+            asset.device_info.delete()
+        elif asset.office_info:
+            asset.office_info.delete()
         asset.delete()
         return form_data
+
+    def add_asset_by_form(self, form_data):
+        add_asset_url = reverse(
+            'add_device',
+            kwargs={
+                'mode': models_assets.ASSET_TYPE2MODE[form_data['type']],
+            },
+        )
+        response = self.client.post(add_asset_url, form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        asset_id = resolve(response.request['PATH_INFO']).kwargs['asset_id']
+        return models_assets.Asset.objects.get(pk=asset_id)
 
     def prepare_readonly_fields(self, new_asset_data, asset, readonly_fields):
         update(new_asset_data, asset, readonly_fields)
@@ -368,7 +402,7 @@ class TestDataCenterDevicesView(TestDevicesView, BaseViewsTest):
 
     def test_edit_device(self):
         """
-        Add device with all fields filled.
+        Edit device with all fields filled.
 
         - generate asset data d1
         - create asset a1
@@ -494,7 +528,7 @@ class TestBackOfficeDevicesView(TestDevicesView, BaseViewsTest):
         """
         self.new_asset_data = self.asset_data.copy()
         self.new_asset_data.update({
-            'hostname': 'XXXYY00001'
+            'hostname': 'XXXYY00001',
         })
         supports = self._update_with_supports(self.new_asset_data)
         new_office_data = self.office_data.copy()
@@ -767,7 +801,7 @@ class TestLicencesView(BaseViewsTest):
         url = reverse('edit_licence', kwargs={
             'licence_id': license.id,
         })
-        form_data = self.get_object_form_data(url, 'form')
+        form_data = self.get_object_form_data(url, ['form'])
         license.delete()
         return form_data
 
@@ -1477,3 +1511,142 @@ class TestColumnsInSearch(BaseViewsTest):
         ])
         search_url = reverse('support_list')
         self.check_cols_presence(search_url, correct_col_names, mode=None)
+
+
+class TestSyncFieldMixin(TestDevicesView):
+    """Whether this the synced field will saved in Assets and Ralph Core"""
+
+    def setUp(self):
+        self.client = login_as_su()
+        self.asset_factory = DCAssetFactory
+
+    def create_device(self):
+        venture = Venture(name='TestVenture', symbol='testventure')
+        venture.save()
+        Device.create(
+            sn='000000001',
+            model_name='test_model',
+            model_type=DeviceType.unknown,
+            priority=SAVE_PRIORITY,
+            venture=venture,
+            name='test_device',
+        )
+        return Device.objects.get(sn='000000001')
+
+    def test_sync_field_in_asset_and_core_on_add_form(self):
+        """Asset has assigned Ralph device, fields will be saved twice"""
+        device_environment = DeviceEnvironmentFactory()
+        service = ServiceCatalogFactory()
+        data = self.get_asset_form_data()
+        device = self.create_device()
+        data['ralph_device_id'] = device.id
+        data['service'] = service.id
+        data['device_environment'] = device_environment.id
+
+        url = reverse('add_device', kwargs={'mode': 'dc'})
+        self.client.post(url, data, follow=True)
+
+        asset = Asset.objects.all()[0]
+        device = Device.objects.get(pk=device.id)
+
+        self.assertNotEqual(device.service, None)
+        self.assertEqual(device.service, asset.service)
+        self.assertNotEqual(asset.device_environment, None)
+        self.assertEqual(device.device_environment, asset.device_environment)
+
+    def test_sync_field_on_edit_asset(self):
+        """Asset created without Ralph device.
+        Fields sync when edit form saved."""
+        device_environment = DeviceEnvironmentFactory()
+        service = ServiceCatalogFactory()
+        asset = DCAssetFactory()
+        asset.device_info.ralph_device_id = None
+        asset.device_info.save()
+
+        self.assertEqual(asset.device_info.ralph_device_id, None)
+
+        device = self.create_device()
+
+        url = reverse(
+            'device_edit', kwargs={'mode': 'dc', 'asset_id': asset.id},
+        )
+        data = self.get_object_form_data(url, ['asset_form', 'additional_info'])  # noqa
+        data['ralph_device_id'] = device.id
+        data['service'] = service.id
+        data['device_environment'] = device_environment.id
+        data['asset'] = 1
+        self.client.post(url, data, follow=True)
+
+        asset = Asset.objects.all()[0]
+        device = Device.objects.get(pk=device.id)
+
+        self.assertEqual(asset.device_info.ralph_device_id, device.id)
+        self.assertNotEqual(device.service, None)
+        self.assertEqual(device.service, asset.service)
+        self.assertNotEqual(asset.device_environment, None)
+        self.assertEqual(device.device_environment, asset.device_environment)
+
+    def test_sync_field_from_device_to_asset(self):
+        """Asset field changed when device was edited."""
+        asset = DCAssetFactory(service=None, device_environment=None)
+        device_environment = DeviceEnvironmentFactory()
+        service = ServiceCatalogFactory()
+
+        device = Device.objects.all()[0]
+        device.service = service
+        device.device_environment = device_environment
+        device.save()
+
+        asset = Asset.objects.all()[0]
+        self.assertNotEqual(device.service, None)
+        self.assertEqual(device.service, asset.service)
+        self.assertNotEqual(asset.device_environment, None)
+        self.assertEqual(device.device_environment, asset.device_environment)
+
+
+class TestAssetAndDeviceLinkage(TestDevicesView, BaseViewsTest):
+
+    asset_factory = DCAssetFactory
+
+    def _check_fields(self, obj, correct_data):
+        for field, correct_value in correct_data.iteritems():
+            self.assertEqual(getattr(obj, field), correct_value)
+
+    def test_asset_clones_fields_to_new_device(self):
+        """
+        - add asset without ralph_device_id
+        - check each field (dc, device_environment, name, remarks, service)
+        is copied to device from asset
+        """
+        # set device_info=None to prevent creation of device
+        form_data = self.get_asset_form_data({'device_info': None})
+        form_data['ralph_device_id'] = ''
+        asset = self.add_asset_by_form(form_data)
+        correct_value = {
+            'dc': asset.warehouse.name,
+            'device_environment': asset.device_environment,
+            'name': asset.model.name,
+            'remarks': asset.order_no,
+            'service': asset.service,
+        }
+        device = Device.objects.get(sn=asset.sn)
+        self._check_fields(device, correct_value)
+
+    def test_asset_spares_existing_device_fields(self):
+        """
+        - create ralph-core device *core_device*
+        - add asset with ralph_device_id = core_device.id
+        - check each field (name, remark, dc) is unchanged
+        """
+        old_value = {
+            'dc': 'device dc',
+            'name': 'device name',
+            'remarks': 'device remarks',
+        }
+        device = DeviceFactory(**old_value)
+        self._check_fields(device, old_value)
+        form_data = self.get_asset_form_data()
+        form_data['ralph_device_id'] = device.id
+        self.add_asset_by_form(form_data)
+        device = Device.objects.get(pk=device.id)
+        self._check_fields(device, old_value)

@@ -55,6 +55,7 @@ from ralph_assets.models import (
     Service,
 )
 from ralph_assets import models_assets
+from ralph.discovery import models_device
 from ralph.ui.widgets import DateWidget, ReadOnlyWidget, SimpleReadOnlyWidget
 
 
@@ -88,7 +89,8 @@ asset_search_back_office_fieldsets = lambda: OrderedDict([
         'collapsed': [
             'warehouse', 'task_url', 'category', 'loan_end_date_from',
             'loan_end_date_to', 'part_info', 'niw', 'manufacturer',
-            'service_name', 'location', 'remarks',
+            'service_name', 'location', 'remarks', 'service',
+            'device_environment',
         ],
     }),
     ('User data', {
@@ -121,7 +123,7 @@ asset_search_dc_fieldsets = lambda: OrderedDict([
         'collapsed': [
             'status', 'task_url', 'category', 'loan_end_date_from',
             'loan_end_date_to', 'part_info', 'niw', 'service_name',
-            'location', 'remarks',
+            'location', 'remarks', 'service', 'device_environment',
         ],
     }),
     ('User data', {
@@ -148,19 +150,21 @@ asset_search_dc_fieldsets = lambda: OrderedDict([
 LOOKUPS = {
     'asset': ('ralph_assets.models', 'DeviceLookup'),
     'asset_all': ('ralph_assets.models', 'AssetLookup'),
-    'linked_device': ('ralph_assets.models', 'LinkedDeviceNameLookup'),
     'asset_bodevice': ('ralph_assets.models', 'BODeviceLookup'),
     'asset_bomodel': ('ralph_assets.models', 'BOAssetModelLookup'),
     'asset_dcdevice': ('ralph_assets.models', 'DCDeviceLookup'),
     'asset_dcmodel': ('ralph_assets.models', 'DCAssetModelLookup'),
-    'manufacturer': ('ralph_assets.models', 'ManufacturerLookup'),
     'asset_model': ('ralph_assets.models', 'AssetModelLookup'),
     'asset_user': ('ralph_assets.models', 'UserLookup'),
     'asset_warehouse': ('ralph_assets.models', 'WarehouseLookup'),
     'budget_info': ('ralph_assets.licences.models', 'BudgetInfoLookup'),
+    'device_environment': ('ralph.ui.channels', 'DeviceEnvrionment'),
     'free_licences': ('ralph_assets.models', 'FreeLicenceLookup'),
     'licence': ('ralph_assets.models', 'LicenceLookup'),
+    'linked_device': ('ralph_assets.models', 'LinkedDeviceNameLookup'),
+    'manufacturer': ('ralph_assets.models', 'ManufacturerLookup'),
     'ralph_device': ('ralph_assets.models', 'RalphDeviceLookup'),
+    'service': ('ralph.ui.channels', 'ServiceCatalogLookup'),
     'softwarecategory': ('ralph_assets.models', 'SoftwareCategoryLookup'),
     'support': ('ralph_assets.models', 'SupportLookup'),
 }
@@ -1000,8 +1004,6 @@ class BaseEditAssetForm(DependencyAssetForm, AddEditAssetMixin, ModelForm):
             'request_date',
             'required_support',
             'service_name',
-            'slots',
-            'sn',
             'sn',
             'source',
             'status',
@@ -1204,25 +1206,60 @@ class AddDeviceForm(BaseAddAssetForm, MultivalFieldForm):
 
 class BackOfficeAddDeviceForm(AddDeviceForm):
 
+    class Meta(BaseAddAssetForm.Meta):
+        fields = BaseAddAssetForm.Meta.fields + (
+            'device_environment', 'service',
+        )
+
+    device_environment = ModelChoiceField(
+        required=False,
+        queryset=models_device.DeviceEnvironment.objects.all(),
+        label=_('Environment'),
+    )
     purpose = ChoiceField(
         choices=[('', '----')] + models_assets.AssetPurpose(),
         label=_('Purpose'),
         required=False,
     )
+    service = AutoCompleteSelectField(
+        LOOKUPS['service'],
+        required=False,
+        label=_('Service catalog'),
+    )
 
     def __init__(self, *args, **kwargs):
         super(BackOfficeAddDeviceForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = move_after(
-            self.fields.keyOrder, 'warehouse', 'purpose'
-        )
+        for after, field in (
+            ('property_of', 'device_environment'),
+            ('device_environment', 'service'),
+        ):
+            self.fieldsets['Basic Info'].append(field)
+            move_after(self.fieldsets['Basic Info'], after, field)
 
 
 class DataCenterAddDeviceForm(AddDeviceForm):
+
+    class Meta(BaseAddAssetForm.Meta):
+        fields = BaseAddAssetForm.Meta.fields + (
+            'device_environment', 'service', 'slots',
+        )
+    device_environment = ModelChoiceField(
+        required=True,
+        queryset=models_device.DeviceEnvironment.objects.all(),
+        label=_('Environment'),
+    )
+    service = AutoCompleteSelectField(
+        LOOKUPS['service'],
+        required=True,
+        label=_('Service catalog'),
+    )
 
     def __init__(self, *args, **kwargs):
         super(DataCenterAddDeviceForm, self).__init__(*args, **kwargs)
         for after, field in (
             ('status', 'slots'),
+            ('property_of', 'device_environment'),
+            ('device_environment', 'service'),
         ):
             self.fieldsets['Basic Info'].append(field)
             move_after(self.fieldsets['Basic Info'], after, field)
@@ -1284,9 +1321,15 @@ class BackOfficeEditDeviceForm(ReadOnlyFieldsMixin, EditDeviceForm):
 
     class Meta(BaseEditAssetForm.Meta):
         fields = BaseEditAssetForm.Meta.fields + (
+            'device_environment', 'hostname', 'service', 'created',
             'hostname', 'created',
         )
 
+    device_environment = ModelChoiceField(
+        required=False,
+        queryset=models_device.DeviceEnvironment.objects.all(),
+        label=_('Environment'),
+    )
     hostname = CharField(
         required=False, widget=SimpleReadOnlyWidget(),
     )
@@ -1295,6 +1338,11 @@ class BackOfficeEditDeviceForm(ReadOnlyFieldsMixin, EditDeviceForm):
         label=_('Purpose'),
         required=False,
     )
+    service = AutoCompleteSelectField(
+        LOOKUPS['service'],
+        required=False,
+        label=_('Service catalog'),
+    )
 
     def __init__(self, *args, **kwargs):
         super(BackOfficeEditDeviceForm, self).__init__(*args, **kwargs)
@@ -1302,6 +1350,8 @@ class BackOfficeEditDeviceForm(ReadOnlyFieldsMixin, EditDeviceForm):
             ('sn', 'imei'),
             ('loan_end_date', 'purpose'),
             ('property_of', 'hostname'),
+            ('hostname', 'device_environment'),
+            ('device_environment', 'service'),
             ('hostname', 'created'),
         ):
             self.fieldsets['Basic Info'].append(field)
@@ -1314,10 +1364,27 @@ class BackOfficeEditDeviceForm(ReadOnlyFieldsMixin, EditDeviceForm):
 
 class DataCenterEditDeviceForm(EditDeviceForm):
 
+    class Meta(BaseEditAssetForm.Meta):
+        fields = BaseEditAssetForm.Meta.fields + (
+            'device_environment', 'service', 'slots',
+        )
+    device_environment = ModelChoiceField(
+        required=True,
+        queryset=models_device.DeviceEnvironment.objects.all(),
+        label=_('Environment'),
+    )
+    service = AutoCompleteSelectField(
+        LOOKUPS['service'],
+        required=True,
+        label=_('Service catalog'),
+    )
+
     def __init__(self, *args, **kwargs):
         super(DataCenterEditDeviceForm, self).__init__(*args, **kwargs)
         for after, field in (
             ('status', 'slots'),
+            ('property_of', 'device_environment'),
+            ('device_environment', 'service'),
         ):
             self.fieldsets['Basic Info'].append(field)
             move_after(self.fieldsets['Basic Info'], after, field)
@@ -1530,6 +1597,16 @@ class SearchAssetForm(Form):
         required=False,
         choices=[('', '----'), ('any', 'any'), ('none', 'none')],
         label=_('Assigned supports'),
+    )
+    device_environment = AutoCompleteField(
+        LOOKUPS['device_environment'],
+        label=_('Environment'),
+        required=False,
+    )
+    service = AutoCompleteField(
+        LOOKUPS['service'],
+        label=_('Service catalog'),
+        required=False,
     )
 
     def __init__(self, *args, **kwargs):

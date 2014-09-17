@@ -1,9 +1,13 @@
 Change Log
 ----------
 
-DEV
-~~~
+DEV:
+~~~~
+To be announced
+
+* Added two fields to asset forms ('service catalog', 'environment')
 * Refactored history mechanism (more flexible)
+
 
 2.2.0
 ~~~~~~~~~

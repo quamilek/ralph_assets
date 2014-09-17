@@ -8,6 +8,10 @@ from __future__ import unicode_literals
 import logging
 import json
 
+from bob.data_table import DataTableColumn
+from bob.menu import MenuItem
+from bob.views.bulk_edit import BulkEditBase as BobBulkEditBase
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
@@ -15,17 +19,12 @@ from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.translation import ugettext_lazy as _
-from django.views.generic import (
-    TemplateView,
-)
+from django.views.generic import TemplateView
 
-from bob.menu import MenuItem, MenuHeader
-from bob.data_table import DataTableColumn
-from bob.views.bulk_edit import BulkEditBase as BobBulkEditBase
-
+from ralph.ui.views.common import MenuMixin
 from ralph.account.models import Perm, ralph_permission
-from ralph_assets import VERSION
-from ralph_assets import forms as assets_forms
+from ralph_assets import VERSION, forms as assets_forms
+from ralph_assets.app import Assets as app
 from ralph_assets.models_assets import AssetType
 from ralph_assets.models import Asset
 from ralph_assets.forms import OfficeForm
@@ -44,7 +43,6 @@ class ACLGateway(object):
     """
     Assets module class which mainly checks user access to page.
     """
-
     perms = [
         {
             'perm': Perm.has_assets_access,
@@ -57,14 +55,12 @@ class ACLGateway(object):
         return super(ACLGateway, self).dispatch(request, *args, **kwargs)
 
 
-class AssetsBase(ACLGateway, TemplateView):
-
+class AssetsBase(ACLGateway, MenuMixin, TemplateView):
+    module_name = app.module_name
     columns = []
-    section = None
     status = ''
+    section = None
     mode = None
-    mainmenu_selected = None
-    sidebar_selected = None
     detect_changes = False
     template_name = "assets/base.html"
 
@@ -74,90 +70,20 @@ class AssetsBase(ACLGateway, TemplateView):
         self.set_asset_objects(mode)
         return super(AssetsBase, self).dispatch(request, *args, **kwargs)
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, *args, **kwargs):
         context = super(AssetsBase, self).get_context_data(**kwargs)
-        self.mainmenu_selected = self.mainmenu_selected or self.mode
-        if self.mode == 'back_office':
-            base_sidebar_caption = _('Back office actions')
-        elif self.mode == 'dc':
-            base_sidebar_caption = _('Data center actions')
-        else:
-            base_sidebar_caption = ''
         context.update({
             'asset_reports_enable': settings.ASSETS_REPORTS['ENABLE'],
             'columns': self.columns,
+            'columns': object(),
             'details': self.kwargs.get('details', 'info'),
-            'footer_items': self.get_footer_items(
-                self.kwargs.get('details', 'info'),
-            ),
-            'mainmenu_items': self.get_mainmenu_items(),
             'mode': self.mode,
             'multivalues_fields': ['sn', 'barcode', 'imei'],
             'search_url': reverse('search', args=[
                 self.kwargs.get('details', 'info'), ''
             ]),
-            'section': self.mainmenu_selected,
-            'show_bulk': self.request.user.get_profile().has_perm(
-                Perm.bulk_edit
-            ),
-            'sidebar_items': self.get_sidebar_items(base_sidebar_caption),
-            'sidebar_selected': self.sidebar_selected,
-            'url_query': self.request.GET,
-            'user': self.request.user,
-            'detect_changes': self.detect_changes,
         })
         return context
-
-    def get_sidebar_items(self, base_sidebar_caption):
-        if self.mode in ('back_office', 'dc'):
-            base_items = (
-                ('add_device', _('Add device'), 'fugue-block--plus', True),
-                ('add_part', _('Add part'), 'fugue-block--plus', True),
-                ('asset_search', _('Search'), 'fugue-magnifier', True),
-            )
-        elif self.mainmenu_selected.startswith('licences'):
-            base_items = (
-                ('add_licence', _('Add licence'), 'fugue-cheque--plus', False),
-            )
-        elif self.mainmenu_selected.startswith('supports'):
-            base_items = (
-                ('add_support', _('Add Support'), 'fugue-block--plus', False),
-            )
-        else:
-            base_items = ()
-        other_items = (
-            ('xls_upload', _('XLS upload'), 'fugue-cheque--plus', False),
-        )
-        items = [
-            {'caption': base_sidebar_caption, 'items': base_items},
-            {'caption': _('Others'), 'items': other_items},
-        ]
-        sidebar_menu = tuple()
-        for item in items:
-            menu_item = (
-                [MenuHeader(item['caption'])] +
-                [MenuItem(
-                    label=label,
-                    fugue_icon=icon,
-                    href=(
-                        reverse(view, kwargs={'mode': self.mode})
-                        if modal else
-                        reverse(view)
-                    )
-                ) for view, label, icon, modal in item['items']]
-            )
-            if sidebar_menu:
-                sidebar_menu += menu_item
-            else:
-                sidebar_menu = menu_item
-        sidebar_menu += [
-            MenuItem(
-                label='Admin',
-                fugue_icon='fugue-toolbox',
-                href=reverse('admin:app_list', args=('ralph_assets',))
-            )
-        ]
-        return sidebar_menu
 
     def set_asset_objects(self, mode):
         if mode == 'dc':
@@ -324,6 +250,34 @@ class BulkEditBase(BobBulkEditBase):
         else:
             query = Q(pk__in=self.get_items_ids())
         return query
+
+
+class ActiveSubmoduleByAssetMixin(object):
+    model_mapper = {
+        'asset_dc': 'search_dc',
+        'asset_back_office': 'search_back_office',
+        'support': 'supports',
+        'licence': 'licences',
+    }
+
+    @property
+    def active_submodule(self):
+        name = self.get_object_class().__name__.lower()
+        if self.mode and name == 'asset':
+            name = '{}_{}'.format(name, self.mode)
+        return self.model_mapper[name]
+
+    def get_object_class(self):
+        raise NotImplementedError('Please override get_object_class() method '
+                                  'in {}.'.format(self.__class__.__name__))
+
+
+class SubmoduleModeMixin(object):
+    @property
+    def active_submodule(self):
+        if self.mode == 'dc':
+            return 'search_dc'
+        return 'search_back_office'
 
 
 class AjaxMixin(object):

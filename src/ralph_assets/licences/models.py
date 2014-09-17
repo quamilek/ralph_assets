@@ -22,6 +22,8 @@ from lck.django.common.models import (
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
 
+from ralph.discovery.models_util import SavingUser
+from ralph.ui.channels import RestrictedLookupChannel
 from ralph_assets.models_assets import (
     Asset,
     AssetManufacturer,
@@ -33,11 +35,7 @@ from ralph_assets.models_assets import (
     CreatableFromString,
     Service,
 )
-from ralph_assets.models_util import (
-    RestrictedLookupChannel,
-    WithForm,
-)
-from ralph.discovery.models_util import SavingUser
+from ralph_assets.models_util import WithForm
 from ralph_assets.history.models import History, HistoryMixin
 
 

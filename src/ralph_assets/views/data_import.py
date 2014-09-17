@@ -58,11 +58,9 @@ logger = logging.getLogger(__name__)
 
 class XlsUploadView(SessionWizardView, AssetsBase):
     """The wizard view for xls/csv upload."""
-
     template_name = 'assets/xls_upload_wizard.html'
     file_storage = FileSystemStorage(location=settings.FILE_UPLOAD_TEMP_DIR)
-    sidebar_selected = 'xls upload'
-    mainmenu_selected = 'xls upload'
+    active_submodule = 'assets_import'
 
     @property
     def mode(self):

@@ -46,6 +46,7 @@ def generate_pdf_response(pdf_data, file_name):
 
 
 class BaseInvoiceReport(GenericSearch):
+    submodule_name = 'unknown'
 
     def show_unique_error_message(self, *args, **kwargs):
         non_unique = {}
@@ -159,6 +160,7 @@ class BaseInvoiceReport(GenericSearch):
 
 
 class AssetInvoiceReport(AssetsSearchQueryableMixin, BaseInvoiceReport):
+    submodule_name = 'unknown'
 
     def get_all_items(self, *args, **kwargs):
         if self.request.GET.get('from_query'):
@@ -182,6 +184,7 @@ class AssetInvoiceReport(AssetsSearchQueryableMixin, BaseInvoiceReport):
 
 
 class LicenceInvoiceReport(LicenseSelectedMixin, BaseInvoiceReport):
+    submodule_name = 'unknown'
 
     def get_all_items(self, *args, **kwargs):
         if self.request.GET.get('from_query'):

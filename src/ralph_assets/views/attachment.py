@@ -15,14 +15,23 @@ from django.http import HttpResponseRedirect
 
 from ralph_assets import models as assets_models
 from ralph_assets.forms import AttachmentForm
+from ralph_assets.views.base import (
+    AssetsBase,
+    ActiveSubmoduleByAssetMixin,
+)
 from ralph_assets.models_assets import Attachment, ASSET_TYPE2MODE
-from ralph_assets.views.base import AssetsBase
 
 
 logger = logging.getLogger(__name__)
 
 
-class BaseAttachment(AssetsBase):
+class AttachmentMixin(ActiveSubmoduleByAssetMixin):
+
+    def get_object_class(self):
+        return self.Parent
+
+
+class BaseAttachment(AttachmentMixin, AssetsBase):
 
     def get_back_url(self, parent_name):
         mapping = {
