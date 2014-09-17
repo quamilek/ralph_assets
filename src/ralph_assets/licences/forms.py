@@ -29,7 +29,12 @@ from django_search_forms.fields_ajax import (
 )
 
 from ralph.ui.widgets import DateWidget
-from ralph_assets.licences.models import Licence, SoftwareCategory
+from ralph_assets.licences.models import (
+    AssetOwner,
+    Licence,
+    LicenceType,
+    SoftwareCategory,
+)
 from ralph_assets.forms import (
     LOOKUPS,
     MultilineField,
@@ -38,7 +43,6 @@ from ralph_assets.forms import (
 )
 from ralph_assets.models import AssetType
 from ralph_assets.models_assets import MODE2ASSET_TYPE
-from ralph_assets.licences.models import AssetOwner, LicenceType
 
 
 class SoftwareCategoryWidget(AutoCompleteWidget):
