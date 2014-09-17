@@ -73,12 +73,13 @@ class AssetSearch(Report, AssetSearchDataTable):
 
     @property
     def submodule_name(self):
-        return 'search_{mode}'.format(mode=self.mode)
+        return 'hardware_{mode}'.format(mode=self.mode)
 
     def get_context_data(self, *args, **kwargs):
         ret = super(AssetSearch, self).get_context_data(*args, **kwargs)
         ret.update({
             'url_query': self.request.GET,
+            'active_submodule': 'hardware',  # TODO: stored in session
         })
         return ret
 

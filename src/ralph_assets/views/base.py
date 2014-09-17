@@ -9,7 +9,6 @@ import logging
 import json
 
 from bob.data_table import DataTableColumn
-from bob.menu import MenuItem
 from bob.views.bulk_edit import BulkEditBase as BobBulkEditBase
 
 from django.conf import settings
@@ -23,7 +22,7 @@ from django.views.generic import TemplateView
 
 from ralph.ui.views.common import MenuMixin
 from ralph.account.models import Perm, ralph_permission
-from ralph_assets import VERSION, forms as assets_forms
+from ralph_assets import forms as assets_forms
 from ralph_assets.app import Assets as app
 from ralph_assets.models_assets import AssetType
 from ralph_assets.models import Asset
@@ -126,99 +125,6 @@ class AssetsBase(ACLGateway, MenuMixin, TemplateView):
         except AttributeError:
             raise Exception("No form class named: {}".format(form_class_name))
         return form_class
-
-    def get_mainmenu_items(self):
-        mainmenu = [
-            MenuItem(
-                fugue_icon='fugue-building',
-                href=reverse('asset_search', kwargs={'mode': 'dc'}),
-                label=_('Data center'),
-                name='dc',
-            ),
-            MenuItem(
-                fugue_icon='fugue-printer',
-                href=reverse('asset_search', kwargs={'mode': 'back_office'}),
-                label=_('BackOffice'),
-                name='back_office',
-            ),
-            MenuItem(
-                fugue_icon='fugue-lifebuoy',
-                href=reverse('support_list'),
-                label=_('Supports'),
-                name='supports',
-            ),
-            MenuItem(
-                fugue_icon='fugue-user-green-female',
-                href=reverse('user_list'),
-                label=_('User list'),
-                name='user list',
-            ),
-            MenuItem(
-                fugue_icon='fugue-cheque',
-                href=reverse('licences_list'),
-                label=_('Licences'),
-                name='licences',
-            ),
-            MenuItem(
-                fugue_icon='fugue-table',
-                href=reverse('assets_reports'),
-                label=_('Reports'),
-                name='reports',
-            ),
-        ]
-        return mainmenu
-
-    def get_footer_items(self, details):
-        footer_items = []
-        if settings.BUGTRACKER_URL:
-            footer_items.append(
-                MenuItem(
-                    fugue_icon='fugue-bug',
-                    href=settings.BUGTRACKER_URL,
-                    label=_('Report a bug'),
-                    pull_right=True,
-                )
-            )
-        footer_items.append(
-            MenuItem(
-                fugue_icon='fugue-document-number',
-                href=settings.ASSETS_CHANGELOG_URL,
-                label=_(
-                    "Version {version}".format(
-                        version='.'.join((str(part) for part in VERSION)),
-                    ),
-                ),
-            )
-        )
-        if self.request.user.is_staff:
-            footer_items.append(
-                MenuItem(
-                    fugue_icon='fugue-toolbox',
-                    href='/admin',
-                    label=_('Admin'),
-                )
-            )
-        footer_items.append(
-            MenuItem(
-                fugue_icon='fugue-user',
-                href=reverse('user_preference', args=[]),
-                label=_('{user} (preference)'.format(user=self.request.user)),
-                pull_right=True,
-                view_args=[details or 'info', ''],
-                view_name='preference',
-            )
-        )
-        footer_items.append(
-            MenuItem(
-                fugue_icon='fugue-door-open-out',
-                href=settings.LOGOUT_URL,
-                label=_('logout'),
-                pull_right=True,
-                view_args=[details or 'info', ''],
-                view_name='logout',
-            )
-        )
-        return footer_items
 
 
 class DataTableColumnAssets(DataTableColumn):
