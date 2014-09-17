@@ -28,14 +28,11 @@ from ralph_assets.licences.models import (
     Licence,
     SoftwareCategory,
 )
-from ralph_assets.models_assets import ASSET_TYPE2MODE
-from ralph_assets.views.asset import Asset
 from ralph_assets.views.base import (
     AssetsBase,
     AjaxMixin,
     BulkEditBase,
     JsonResponseMixin,
-    get_return_link,
 )
 from ralph_assets.views.search import GenericSearch
 
@@ -280,24 +277,6 @@ class LicenceBulkEdit(BulkEditBase, LicenceBaseView):
     model = Licence
     template_name = 'assets/bulk_edit.html'
     form_bulk = BulkEditLicenceForm
-
-
-class DeleteLicence(AssetsBase):
-    """Delete a licence."""
-
-    def post(self, *args, **kwargs):
-        record_id = self.request.POST.get('record_id')
-        try:
-            licence = Licence.objects.get(pk=record_id)
-        except Asset.DoesNotExist:
-            messages.error(self.request, _("Selected asset doesn't exists."))
-            return HttpResponseRedirect(get_return_link(self.mode))
-        self.back_to = reverse(
-            'licence_list',
-            kwargs={'mode': ASSET_TYPE2MODE[licence.asset_type]},
-        )
-        licence.delete()
-        return HttpResponseRedirect(self.back_to)
 
 
 class CountLicence(AjaxMixin, JsonResponseMixin, GenericSearch):

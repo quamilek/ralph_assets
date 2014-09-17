@@ -901,19 +901,6 @@ class TestLicencesView(BaseViewsTest):
         )
         self.assertContains(response, '1 licences added')
 
-    def test_licence_assign_licence(self):
-        url = reverse('assign_licence')
-        response = self.client.ajax_post(url, data={'a': 1})
-        self.assertEqual(response.status_code, 200)
-        # self.assertEqual(
-        #     json.loads(response.content),
-        #     {
-        #         'used_by_users': number_of_users * licences_per_object,
-        #         'used_by_assets': number_of_assets * licences_per_object,
-        #         'total': licences[0].number_bought,
-        #     },
-        # )
-
 
 class TestSupportsView(BaseViewsTest):
     """This test case concern all supports views."""

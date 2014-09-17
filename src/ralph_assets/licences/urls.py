@@ -9,9 +9,7 @@ from django.conf.urls import patterns, url
 
 from ralph_assets.licences.views import (
     AddLicence,
-    AssignLicence,
     CountLicence,
-    # DeleteLicence,
     EditLicence,
     LicenceList,
     LicenceBulkEdit,
@@ -47,11 +45,6 @@ urlpatterns = patterns(
         AddLicence.as_view(),
         name='add_licence',
     ),
-    # url(
-    #     r'^(?P<mode>(back_office|dc))/delete/$',
-    #     DeleteLicence.as_view(),
-    #     name='delete_licence',
-    # ),
     url(
         r'^edit/(?P<licence_id>[0-9]+)$',
         EditLicence.as_view(),
@@ -61,10 +54,5 @@ urlpatterns = patterns(
         r'^count/$',
         CountLicence.as_view(),
         name='count_licences',
-    ),
-    url(
-        r'^assign/$',
-        AssignLicence.as_view(),
-        name='assign_licence',
     ),
 )
