@@ -12,6 +12,7 @@ from django.db import models
 from django.db.models import Sum
 from django.db.models.loading import get_model
 from django.utils.functional import cached_property
+from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 from lck.django.common.models import (
     Named,
@@ -21,6 +22,7 @@ from lck.django.common.models import (
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
 
+from ralph.discovery.models_util import SavingUser
 from ralph.ui.channels import RestrictedLookupChannel
 from ralph_assets.models_assets import (
     Asset,
@@ -33,15 +35,14 @@ from ralph_assets.models_assets import (
     CreatableFromString,
     Service,
 )
-from ralph_assets.models_util import (
-    WithForm,
-)
-from ralph.discovery.models_util import SavingUser
-from ralph_assets.history.models import HistoryMixin
+from ralph_assets.models_util import WithForm
+from ralph_assets.history.models import History, HistoryMixin
 
 
 class LicenceType(Named):
     """The type of a licence"""
+    class Meta:
+        app_label = 'ralph_assets'
 
 
 class SoftwareCategory(Named, CreatableFromString):
@@ -49,6 +50,9 @@ class SoftwareCategory(Named, CreatableFromString):
     asset_type = models.PositiveSmallIntegerField(
         choices=AssetType()
     )
+
+    class Meta:
+        app_label = 'ralph_assets'
 
     @classmethod
     def create_from_string(cls, asset_type, s):
@@ -177,6 +181,9 @@ class Licence(
 
     _used = None
 
+    class Meta:
+        app_label = 'ralph_assets'
+
     def __unicode__(self):
         return "{} x {} - {}".format(
             self.number_bought,
@@ -222,9 +229,20 @@ class Licence(
             name.lower(): obj,
             'licence': self,
         }
-        assigned_licence, _ = Model.objects.get_or_create(**kwargs)
+        assigned_licence, created = Model.objects.get_or_create(**kwargs)
         assigned_licence.quantity = quantity
         assigned_licence.save(update_fields=['quantity'])
+        History.objects.log_changes(
+            obj,
+            getattr(self, 'saving_user', None),
+            [
+                {
+                    'field': 'assigned_licence_quantity',
+                    'old': '-' if created else assigned_licence.quantity,
+                    'new': quantity,
+                },
+            ]
+        )
 
     def detach(self, obj):
         Model, name = self.get_model_from_obj(obj)
@@ -232,10 +250,24 @@ class Licence(
             name.lower(): obj,
             'licence': self,
         }
+        old_value = '-'
         try:
-            Model.objects.get(**kwargs).delete()
+            assigned_licence = Model.objects.get(**kwargs)
+            old_value = assigned_licence.quantity
+            assigned_licence.delete()
         except Model.DoesNotExist:
-            pass
+            return
+        History.objects.log_changes(
+            obj,
+            getattr(self, 'saving_user', None),
+            [
+                {
+                    'field': 'assigned_licence_quantity',
+                    'old': old_value,
+                    'new': '-',
+                },
+            ]
+        )
 
 
 class LicenceAsset(models.Model):
@@ -244,6 +276,7 @@ class LicenceAsset(models.Model):
     quantity = models.PositiveIntegerField(default=1)
 
     class Meta:
+        app_label = 'ralph_assets'
         db_table = 'ralph_assets_licence_assets'
         unique_together = ('licence', 'asset')
 
@@ -259,6 +292,7 @@ class LicenceUser(models.Model):
     quantity = models.PositiveIntegerField(default=1)
 
     class Meta:
+        app_label = 'ralph_assets'
         db_table = 'ralph_assets_licence_users'
         unique_together = ('licence', 'user')
 
@@ -270,6 +304,9 @@ class LicenceUser(models.Model):
 
 class BudgetInfoLookup(RestrictedLookupChannel):
     model = BudgetInfo
+
+    class Meta:
+        app_label = 'ralph_assets'
 
     def get_query(self, q, request):
         return BudgetInfo.objects.filter(
@@ -288,3 +325,20 @@ class BudgetInfoLookup(RestrictedLookupChannel):
 
 class SoftwareCategoryLookup(RestrictedLookupChannel):
     model = SoftwareCategory
+
+    class Meta:
+        app_label = 'ralph_assets'
+
+    def get_query(self, q, request):
+        return SoftwareCategory.objects.filter(
+            name__icontains=q
+        ).order_by('name')[:10]
+
+    def get_result(self, obj):
+        return obj.name
+
+    def format_match(self, obj):
+        return self.format_item_display(obj)
+
+    def format_item_display(self, obj):
+        return escape(obj.name)

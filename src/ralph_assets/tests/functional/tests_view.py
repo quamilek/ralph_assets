@@ -21,7 +21,7 @@ from ralph.discovery.tests.util import DeviceFactory
 
 from ralph_assets import models_assets
 from ralph_assets import models_support
-from ralph_assets import models_sam
+from ralph_assets.licences import models as models_sam
 from ralph_assets.models_assets import Asset, SAVE_PRIORITY
 from ralph_assets.tests.utils import (
     AjaxClient,
@@ -724,7 +724,7 @@ class TestLicencesView(BaseViewsTest):
         request_data = self.license_data.copy()
         response = self.client.post(reverse('add_licence'), request_data)
         self.assertRedirects(
-            response, reverse('licence_list'), status_code=302,
+            response, reverse('licences_list'), status_code=302,
             target_status_code=200,
         )
         license = models_sam.Licence.objects.reverse()[0]
@@ -904,7 +904,6 @@ class TestLicencesView(BaseViewsTest):
     def test_licence_assign_licence(self):
         url = reverse('assign_licence')
         response = self.client.ajax_post(url, data={'a': 1})
-        print(response)  # DETELE THIS
         self.assertEqual(response.status_code, 200)
         # self.assertEqual(
         #     json.loads(response.content),
@@ -1501,7 +1500,7 @@ class TestColumnsInSearch(BaseViewsTest):
             'Property of', 'Software Category', 'Type', 'Used', 'Valid thru',
             'Created',
         ])
-        search_url = reverse('licence_list')
+        search_url = reverse('licences_list')
         self.check_cols_presence(search_url, correct_col_names, mode=None)
 
     def test_supports_cols_presence(self):

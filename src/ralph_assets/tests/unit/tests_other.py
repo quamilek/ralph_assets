@@ -15,7 +15,7 @@ from django.test.utils import override_settings
 from ralph.discovery.tests.util import DeviceFactory
 from ralph_assets.models import AssetManufacturer
 from ralph_assets import models_assets
-from ralph_assets.models_sam import (
+from ralph_assets.licences.models import (
     AssetOwner,
     Licence,
     LicenceType,

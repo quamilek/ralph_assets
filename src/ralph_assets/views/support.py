@@ -5,21 +5,23 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from bob.data_table import DataTableColumn
+
+from django.contrib import messages
+from django.core.urlresolvers import reverse
+from django.http import HttpResponseRedirect
+from django.utils.translation import ugettext_lazy as _
+
 from ralph_assets.forms_support import (
     AddSupportForm,
     EditSupportForm,
     SupportSearchForm,
 )
+from ralph_assets.models_assets import Asset
 from ralph_assets.models_support import Support
 from ralph_assets.views.base import AssetsBase
+from ralph_assets.licences.views import CheckBoxColumn
 from ralph_assets.views.search import GenericSearch
-from bob.data_table import DataTableColumn
-from ralph_assets.models_assets import Asset
-from django.utils.translation import ugettext_lazy as _
-from django.contrib import messages
-from django.http import HttpResponseRedirect
-from django.core.urlresolvers import reverse
-from ralph_assets.views.sam import CheckBoxColumn
 
 
 class SupportLinkColumn(DataTableColumn):

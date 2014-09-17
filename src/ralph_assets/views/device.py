@@ -26,7 +26,7 @@ from ralph_assets.forms import (
 )
 from ralph_assets.models import Asset, AssetModel, PartInfo
 from ralph_assets.models_assets import AssetType
-from ralph_assets.models_sam import Licence
+from ralph_assets.licences.models import Licence
 from ralph_assets.views.base import AssetsBase, SubmoduleModeMixin
 from ralph_assets.views.utils import (
     _create_device,
