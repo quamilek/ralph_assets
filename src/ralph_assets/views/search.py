@@ -45,6 +45,7 @@ class AssetsSearchQueryableMixin(object):
             'deleted',
             'department',
             'deprecation_rate',
+            'device_environment',
             'device_info',
             'hostname',
             'employee_id',
@@ -66,6 +67,7 @@ class AssetsSearchQueryableMixin(object):
             'ralph_device_id',
             'remarks',
             'required_support',
+            'service',
             'service_name',
             'sn',
             'source',
@@ -246,6 +248,18 @@ class AssetsSearchQueryableMixin(object):
                         all_q &= Q(budget_info__name=field_value)
                     else:
                         all_q &= Q(budget_info__name__icontains=field_value)
+                elif field == 'service':
+                    if exact:
+                        all_q &= Q(service__name=field_value)
+                    else:
+                        all_q &= Q(service__name__icontains=field_value)
+                elif field == 'device_environment':
+                    if exact:
+                        all_q &= Q(device_environment__name=field_value)
+                    else:
+                        all_q &= Q(
+                            device_environment__name__icontains=field_value,
+                        )
                 else:
                     q = Q(**{field: field_value})
                     all_q = all_q & q

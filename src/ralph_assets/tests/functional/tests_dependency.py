@@ -18,6 +18,7 @@ from ralph_assets.tests.utils.assets import (
     WarehouseFactory,
 )
 from ralph.ui.tests.global_utils import login_as_su
+from ralph_assets.tests.utils import assets
 
 
 class TestDependency(TestCase):
@@ -54,14 +55,16 @@ class TestDependency(TestCase):
         response = self.client.post(
             reverse('add_device', kwargs={'mode': 'dc'}),
             {
-                'slots': 2,
                 'category': self.category_blade.pk,
-                'warehouse': self.warehouse.id,
                 'deprecation_rate': '25',
-                'sn': '123456789',
+                'device_environment': assets.DeviceEnvironmentFactory().id,
                 'model': self.model_blade.id,
                 'ralph_device_id': '',
-                'type': MODE2ASSET_TYPE['dc'].id
+                'service': assets.ServiceCatalogFactory().id,
+                'slots': 2,
+                'sn': '123456789',
+                'type': MODE2ASSET_TYPE['dc'].id,
+                'warehouse': self.warehouse.id,
             }
         )
         self.assertEqual(Asset.objects.count(), 1)
@@ -71,14 +74,16 @@ class TestDependency(TestCase):
         self.client.post(
             reverse('add_device', kwargs={'mode': 'dc'}),
             {
-                'slots': '',
                 'category': self.category_non_blade.pk,
-                'warehouse': self.warehouse.id,
                 'deprecation_rate': '25',
-                'sn': '123456789',
+                'device_environment': assets.DeviceEnvironmentFactory().id,
                 'model': self.model_none_blade.id,
                 'ralph_device_id': '',
+                'service': assets.ServiceCatalogFactory().id,
+                'slots': '',
+                'sn': '123456789',
                 'type': MODE2ASSET_TYPE['dc'].id,
+                'warehouse': self.warehouse.id,
             }
         )
         self.assertEqual(Asset.objects.count(), 1)

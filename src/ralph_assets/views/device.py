@@ -27,7 +27,7 @@ from ralph_assets.forms import (
 from ralph_assets.models import Asset, AssetModel, PartInfo
 from ralph_assets.models_assets import AssetType
 from ralph_assets.models_sam import Licence
-from ralph_assets.views.base import AssetsBase
+from ralph_assets.views.base import AssetsBase, SubmoduleModeMixin
 from ralph_assets.views.utils import (
     _create_device,
     _move_data,
@@ -40,9 +40,9 @@ from ralph_assets.views.utils import (
 logger = logging.getLogger(__name__)
 
 
-class AddDevice(AssetsBase):
+class AddDevice(SubmoduleModeMixin, AssetsBase):
+    active_sidebar_item = 'add device'
     template_name = 'assets/add_device.html'
-    sidebar_selected = 'add device'
 
     def get_context_data(self, **kwargs):
         ret = super(AddDevice, self).get_context_data(**kwargs)
@@ -114,6 +114,7 @@ class AddDevice(AssetsBase):
                     self.additional_info.cleaned_data,
                     self.mode,
                 )
+                device.save()
                 ids.append(device.id)
             messages.success(self.request, _("Assets saved."))
             cat = self.request.path.split('/')[2]
@@ -131,7 +132,7 @@ class AddDevice(AssetsBase):
         return super(AddDevice, self).get(*args, **kwargs)
 
 
-class EditDevice(AssetsBase):
+class EditDevice(SubmoduleModeMixin, AssetsBase):
     detect_changes = True
     template_name = 'assets/edit_device.html'
     sidebar_selected = 'edit device'
@@ -285,7 +286,7 @@ class EditDevice(AssetsBase):
         return super(EditDevice, self).get(*args, **kwargs)
 
 
-class SplitDeviceView(AssetsBase):
+class SplitDeviceView(SubmoduleModeMixin, AssetsBase):
     template_name = 'assets/split_edit.html'
     sidebar_selected = ''
 

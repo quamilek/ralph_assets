@@ -12,6 +12,8 @@ from ralph_assets.tests.util import SCREEN_ERROR_MESSAGES
 from ralph_assets.tests.utils.assets import (
     AssetCategoryFactory,
     AssetModelFactory,
+    DeviceEnvironmentFactory,
+    ServiceCatalogFactory,
     WarehouseFactory,
 )
 from ralph.ui.tests.global_utils import login_as_su
@@ -25,19 +27,21 @@ class TestMultivalueFields(TestCase):
         self.model = AssetModelFactory(category=self.category)
         self.addform = '/assets/dc/add/device/'
         self.common_test_data = dict(
-            type=AssetType.data_center.id,
-            model=self.model.id,
+            asset=True,
+            deprecation_rate=0,
+            device_environment=DeviceEnvironmentFactory().id,
             invoice_date='2001-01-02',
-            warehouse=self.warehouse.id,
-            status=AssetStatus.new.id,
+            model=self.model.id,
             price='10',
+            production_year=2011,
+            ralph_device_id='',
+            service=ServiceCatalogFactory().id,
             size=1,
             slots=1,
-            ralph_device_id='',
-            asset=True,
             source=1,
-            deprecation_rate=0,
-            production_year=2011,
+            status=AssetStatus.new.id,
+            type=AssetType.data_center.id,
+            warehouse=self.warehouse.id,
         )
 
     def test_add_form_testing_sn_and_barcode(self):

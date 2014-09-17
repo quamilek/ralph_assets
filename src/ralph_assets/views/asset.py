@@ -14,7 +14,12 @@ from django.utils.translation import ugettext_lazy as _
 
 from ralph_assets.models import Asset
 from ralph_assets.models_assets import AssetType
-from ralph_assets.views.base import AssetsBase, BulkEditBase, get_return_link
+from ralph_assets.views.base import (
+    ActiveSubmoduleByAssetMixin,
+    AssetsBase,
+    BulkEditBase,
+    get_return_link,
+)
 from ralph_assets.views.search import _AssetSearch, AssetSearchDataTable
 from ralph_assets.views.utils import _move_data, _update_office_info
 from ralph.util.reports import Report
@@ -64,11 +69,26 @@ class DeleteAsset(AssetsBase):
 
 class AssetSearch(Report, AssetSearchDataTable):
     """The main-screen search form for all type of assets."""
+    active_sidebar_item = 'search'
+
+    @property
+    def submodule_name(self):
+        return 'search_{mode}'.format(mode=self.mode)
+
+    def get_context_data(self, *args, **kwargs):
+        ret = super(AssetSearch, self).get_context_data(*args, **kwargs)
+        ret.update({
+            'url_query': self.request.GET,
+        })
+        return ret
 
 
-class AssetBulkEdit(BulkEditBase, _AssetSearch):
+class AssetBulkEdit(ActiveSubmoduleByAssetMixin, BulkEditBase, _AssetSearch):
     model = Asset
     commit_on_valid = False
+
+    def get_object_class(self):
+        return self.model
 
     def initial_forms(self, formset, queryset):
         for idx, asset in enumerate(queryset):

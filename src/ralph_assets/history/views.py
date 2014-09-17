@@ -35,6 +35,7 @@ class HistoryBase(AssetsBase):
 
 class HistoryListForModel(PaginateMixin, ContentTypeMixin, HistoryBase):
     """View for history of object."""
+    submodule_name = 'unknown'
     template_name = 'assets/history/history_for_model.html'
 
     def dispatch(self, request, *args, **kwargs):

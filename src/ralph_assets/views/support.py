@@ -35,6 +35,7 @@ class SupportLinkColumn(DataTableColumn):
 class SupportView(AssetsBase):
     """Base view that displays support form."""
 
+    submodule_name = 'supports'
     template_name = 'assets/add_support.html'
     mainmenu_selected = 'supports'
     sidebar_selected = None
@@ -68,10 +69,9 @@ class SupportView(AssetsBase):
 
 class AddSupportView(SupportView):
     """Add a new support"""
-
     caption = _('Add Support')
-    mainmenu_selected = 'supports'
     message = _('Support added')
+    active_sidebar_item = 'add support'
 
     def __init__(self, *args, **kwargs):
         self.form_class = AddSupportForm
@@ -96,7 +96,8 @@ class AddSupportView(SupportView):
 class SupportList(GenericSearch):
     """The support list."""
 
-    mainmenu_selected = 'supports'
+    submodule_name = 'supports'
+    active_sidebar_item = 'search'
     Form = SupportSearchForm
     Model = Support
 
@@ -158,15 +159,14 @@ class SupportList(GenericSearch):
 
 class EditSupportView(SupportView):
     """Edit support"""
+    caption = _('Edit Support')
+    message = _('Support changed')
+    Form = EditSupportForm
     detect_changes = True
 
     def __init__(self, *args, **kwargs):
         self.form_class = EditSupportForm
         super(EditSupportView, self).__init__(*args, **kwargs)
-
-    caption = _('Edit Support')
-    message = _('Support changed')
-    Form = EditSupportForm
 
     def get(self, request, support_id, *args, **kwargs):
         self.support = Support.objects.get(pk=support_id)

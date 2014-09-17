@@ -19,9 +19,11 @@ from ralph_assets.history.models import History
 from ralph_assets.tests.utils.assets import (
     AssetCategoryFactory,
     AssetManufacturerFactory,
-    AssetOwnerFactory,
     AssetModelFactory,
+    AssetOwnerFactory,
     BOAssetFactory,
+    DeviceEnvironmentFactory,
+    ServiceCatalogFactory,
     WarehouseFactory,
 )
 from ralph_assets.tests.utils.sam import LicenceFactory
@@ -43,27 +45,27 @@ class HistoryAssetsView(TestCase):
         self.licences = [LicenceFactory() for _ in range(3)]
         self.warehouse = WarehouseFactory()
         self.asset_params = {
-            'type': 101,
-            'model': self.model.id,
-            'invoice_no': 123,
-            'order_no': 1,
+            'asset': True,  # Button name
+            'barcode': '666666',
+            'deprecation_rate': 0,
             'invoice_date': '2012-11-28',
+            'invoice_no': 123,
+            'licences': '',
+            'model': self.model.id,
+            'order_no': 1,
+            'price': 10,
+            'property_of': self.owner.id,
+            'provider': 'test_provider',
+            'remarks': 'test_remarks',
+            'size': 1,
+            'sn': '666-666-666',
+            'source': 1,
+            'status': AssetStatus.new.id,
             'support_period': 24,
             'support_type': 'standard',
             'support_void_reporting': 'on',
-            'provider': 'test_provider',
-            'property_of': self.owner.id,
-            'status': AssetStatus.new.id,
-            'remarks': 'test_remarks',
-            'size': 1,
-            'price': 10,
+            'type': 101,
             'warehouse': self.warehouse.id,
-            'sn': '666-666-666',
-            'barcode': '666666',
-            'asset': True,  # Button name
-            'source': 1,
-            'deprecation_rate': 0,
-            'licences': '',
         }
         self.asset_change_params = {
             'barcode': '777777',
@@ -180,21 +182,23 @@ class ConnectAssetWithDevice(TestCase):
         )
         self.warehouse = WarehouseFactory()
         self.asset_params = {
-            'type': AssetType.data_center.id,
-            'model': self.model.id,
-            'invoice_no': 666,
-            'order_no': 2,
-            'invoice_date': '2012-11-29',
-            'provider': 'test_provider',
-            'status': AssetStatus.new.id,
-            'remarks': 'test_remarks',
-            'price': 10,
-            'warehouse': self.warehouse.id,
-            'barcode': '7777',
-            'source': 1,
-            'deprecation_rate': 0,
-            'production_year': 2011,
             'asset': True,  # Button name
+            'barcode': '7777',
+            'deprecation_rate': 0,
+            'device_environment': DeviceEnvironmentFactory().id,
+            'invoice_date': '2012-11-29',
+            'invoice_no': 666,
+            'model': self.model.id,
+            'order_no': 2,
+            'price': 10,
+            'production_year': 2011,
+            'provider': 'test_provider',
+            'remarks': 'test_remarks',
+            'service': ServiceCatalogFactory().id,
+            'source': 1,
+            'status': AssetStatus.new.id,
+            'type': AssetType.data_center.id,
+            'warehouse': self.warehouse.id,
         }
         self.dc_asset_params = self.asset_params.copy()
         self.dc_asset_params.update({
@@ -258,21 +262,23 @@ class TestsStockDevice(TestCase):
         )
         self.warehouse = WarehouseFactory()
         self.asset_params = {
-            'type': AssetType.data_center.id,
-            'model': self.model.id,
-            'warehouse': self.warehouse.id,
-            'status': AssetStatus.new.id,
-            'remarks': 'test_remarks',
-            'order_no': 2,
+            'asset': True,  # Button name
+            'barcode': '7777',
+            'deprecation_rate': 0,
+            'device_environment': DeviceEnvironmentFactory().id,
             'invoice_date': '2012-11-29',
             'invoice_no': 00001,
+            'model': self.model.id,
+            'order_no': 2,
             'price': 10,
             'provider': 'test_provider',
-            'deprecation_rate': 0,
-            'source': 1,
+            'remarks': 'test_remarks',
+            'service': ServiceCatalogFactory().id,
             'sn': 'fake-sn',
-            'barcode': '7777',
-            'asset': True,  # Button name
+            'source': 1,
+            'status': AssetStatus.new.id,
+            'type': AssetType.data_center.id,
+            'warehouse': self.warehouse.id,
         }
         self.dc_asset_params = self.asset_params.copy()
         self.dc_asset_params.update({

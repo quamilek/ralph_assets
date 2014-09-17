@@ -20,7 +20,11 @@ from ralph_assets.forms import (
     OfficeForm,
 )
 from ralph_assets.models import Asset
-from ralph_assets.views.base import AssetsBase, get_return_link
+from ralph_assets.views.base import (
+    AssetsBase,
+    SubmoduleModeMixin,
+    get_return_link,
+)
 from ralph_assets.views.utils import (
     _create_part,
     _update_asset,
@@ -33,9 +37,9 @@ from ralph_assets.views.utils import (
 logger = logging.getLogger(__name__)
 
 
-class AddPart(AssetsBase):
+class AddPart(SubmoduleModeMixin, AssetsBase):
+    active_sidebar_item = 'add part'
     template_name = 'assets/add_part.html'
-    sidebar_selected = 'add part'
 
     def get_context_data(self, **kwargs):
         ret = super(AddPart, self).get_context_data(**kwargs)
@@ -107,7 +111,7 @@ class AddPart(AssetsBase):
         return super(AddPart, self).get(*args, **kwargs)
 
 
-class EditPart(AssetsBase):
+class EditPart(SubmoduleModeMixin, AssetsBase):
     detect_changes = True
     template_name = 'assets/edit_part.html'
 

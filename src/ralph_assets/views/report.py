@@ -382,7 +382,7 @@ class LicenceRelationsReport(BaseRelationsReport):
 
 
 class ReportViewBase(AssetsBase):
-    mainmenu_selected = 'reports'
+    submodule_name = 'assets_reports'
     reports = [
         CategoryModelReport,
         CategoryModelStatusReport,
@@ -431,6 +431,10 @@ class ReportsList(ReportViewBase):
 
 class ReportDetail(Report, ReportViewBase):
     template_name = 'assets/report_detail.html'
+
+    @property
+    def active_sidebar_item(self):
+        return self.report.name
 
     def get_report(self, slug):
         for report in self.reports:
