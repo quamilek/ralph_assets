@@ -134,7 +134,8 @@ from ralph_assets.forms import LOOKUPS
 from django.forms.models import modelformset_factory
 
 
-def assgined_formset_factory(obj, base_model, field, lookup, extra_exclude=None):
+def assgined_formset_factory(obj, base_model, field, lookup,
+                             extra_exclude=None):
     obj_class_name = obj.__class__.__name__.lower()
     if obj_class_name == field:
         raise Exception('Nie można podawać takich samych pól')
