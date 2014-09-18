@@ -10,6 +10,14 @@
 {{ error }}
 </div>
 {% endfor %}
+<ul class="nav nav-tabs">
+  <li class="active">
+    <a href="#">{% trans "Basic info" %}</a>
+  </li>
+  {% if licence %}
+    <li><a href="{% url licence_connections licence.id %}">{% trans "Connections" %}</a></li>
+  {% endif %}
+</ul>
 <form id="{{ form_id }}" class="form form-horizontal" method="POST"{% if edit_mode %} enctype="multipart/form-data"{% endif %} {% dependency_data asset_form %}>
   {% csrf_token %}
   <div class="row-fluid">

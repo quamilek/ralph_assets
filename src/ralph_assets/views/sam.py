@@ -14,9 +14,15 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.core.urlresolvers import reverse
 from django.db.models import Sum, Count
+from django.forms.models import formset_factory
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext_lazy as _
 
+from ralph_assets.forms_multi import (
+    AssetLicenceAssignForm,
+    UserLicenceAssignForm,
+)
 from ralph_assets.forms_sam import (
     SoftwareCategorySearchForm,
     LicenceSearchForm,
@@ -24,6 +30,7 @@ from ralph_assets.forms_sam import (
     EditLicenceForm,
     BulkEditLicenceForm,
 )
+from ralph_assets.views.base import SubmoduleModeMixin
 from ralph_assets.models_assets import MODE2ASSET_TYPE
 from ralph_assets.models_history import LicenceHistoryChange
 from ralph_assets.models_sam import (
@@ -353,3 +360,53 @@ class CountLicence(AjaxMixin, JsonResponseMixin, GenericSearch):
             used_by_users=Sum('users_count'),
         ))
         return self.render_json_response(summary)
+
+
+class LicenceConnectionsView(SubmoduleModeMixin, AssetsBase):
+    template_name = 'assets/licence_connections.html'
+    submodule_name = 'licences'
+
+    def get(self, *args, **kwargs):
+        self.licence = Licence.objects.get(id=kwargs.get('licence_id'))
+        self.licence = get_object_or_404(
+            Licence.objects, id=kwargs.get('licence_id'),
+        )
+        return super(LicenceConnectionsView, self).get(*args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return super(LicenceConnectionsView, self).get(*args, **kwargs)
+
+    def prepare_formset(self, *args, **kwargs):
+        empty_formset = formset_factory(
+            form=AssetLicenceAssignForm, extra=1,
+        )(initial={})
+
+        AssetFormsetFactory = formset_factory(
+            form=AssetLicenceAssignForm, extra=2,
+        )
+        asset_connections_formset = AssetFormsetFactory(
+            initial={}, prefix='assets',
+        )
+        UserFormsetFactory = formset_factory(
+            form=UserLicenceAssignForm, extra=2,
+        )
+        user_connections_formset = UserFormsetFactory(
+            initial={}, prefix='users',
+        )
+
+        return {
+            'empty_formset': empty_formset,
+            'asset_connections_formset': asset_connections_formset,
+            'user_connections_formset': user_connections_formset,
+        }
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(LicenceConnectionsView, self).get_context_data(
+            *args, **kwargs
+        )
+        context.update(self.prepare_formset())
+        context.update({
+            'licence': self.licence,
+            'caption': _('Edit Licence relations')
+        })
+        return context

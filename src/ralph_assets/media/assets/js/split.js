@@ -2,20 +2,13 @@ $(document).ready(function () {
     var FORM_COUNT = parseInt($('input[name="form-TOTAL_FORMS"]').val());
 
     $('.add_row').on("click", function () {
-        var ajax_fetch_url = $(this).data('ajax-fetch-url');
-        if (ajax_fetch_url){
-
-            var row =
-            $.get(ajax_fetch_url + '?replace_id=' + FORM_COUNT, function(template) {
-                    $(".form-split tbody").append(template);
-            });
-        } else {
-            var row = $('.form-split tbody tr').last().clone(true, true);
-            cleanup_fields(row);
-            row.appendTo(".form-split tbody");
-        }
+        var row = $('.form-split tbody tr').last().clone(true, true);
+        var row_html = $('#row-to-copy').html();
+        $('.form-split tbody').append(row_html)
         change_form_counter('add');
-        // renumber_forms();
+        renumber_forms();
+        bas = BobAjaxSelect.getInstance();
+        bas.register_in_element($('.form-split tbody tr').last());
         return false;
     });
 
@@ -42,30 +35,23 @@ $(document).ready(function () {
         $('input[name="form-TOTAL_FORMS"]').val(FORM_COUNT);
     }
 
-    function cleanup_fields(row) {
-        row.find('input, select').each(function (i, elem) {
-            $(elem).val('');
-            td_class = $(elem).parent().attr('class');
-            td_class = td_class.replace('error', '');
-            $(elem).parent().attr('class', td_class);
-        });
-        row.find('.help-inline').remove();
-        row.find('.uneditable-input').html('');
-        return false;
-    }
-
     function renumber_forms() {
         var form = $('.form-split tr');
         form.each(function (i, elem) {
-            $(elem).find('input, select').each(function (j, elem) {
+            $(elem).find('input, select, span, div,').each(function (j, elem) {
                 var numberPattern = /\d+/g;
                 var name = $(elem).attr('name');
-                $(elem).attr('name', name.replace(numberPattern, i - 1));
+                if (name) {
+                    $(elem).attr('name', name.replace(numberPattern, i - 1));
+                }
                 var id = $(elem).attr('id');
-                $(elem).attr('id', name.replace(numberPattern, i - 1));
+                if (id) {
+                    $(elem).attr('id', id.replace(numberPattern, i - 1));
+                }
             });
 
         });
+
         $('.ordinal').each(function (i, elem) {
             $(elem).html(i + 1);
         });

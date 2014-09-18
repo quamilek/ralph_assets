@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 
 from django import template
 from django.core.urlresolvers import reverse
+from django.forms import CheckboxInput
 
 from ralph_assets.models import get_edit_url
 from ralph_assets.models_support import Support
@@ -54,3 +55,21 @@ def object_list_search(object_instance, field):
     else:
         raise ValueError('%s is not supported' % object_instance)
     return {'url': url, 'field': field, 'show': params}
+
+
+@register.filter(name='is_checkbox')
+def is_checkbox(field):
+    return field.field.widget.__class__.__name__ == CheckboxInput().__class__.__name__  # noqa
+
+
+@register.inclusion_tag('assets/templatetags/multi_assign_widget.html')
+def multi_assign_widget(empty_formset, formset):
+    return {
+        'empty_formset': empty_formset,
+        'formset': formset,
+    }
+
+
+@register.inclusion_tag('assets/templatetags/multi_assign_form.html')
+def multi_assign_form(form, counter=''):
+    return {'form': form, 'counter': counter}

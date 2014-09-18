@@ -36,7 +36,6 @@ from ralph_assets.views.asset import (
 from ralph_assets.views.ajax import (
     CategoryDependencyView,
     ModelDependencyView,
-    MultiFormRowAjaxView,
 )
 from ralph_assets.views.data_import import XlsUploadView
 from ralph_assets.views.sam import (
@@ -45,8 +44,9 @@ from ralph_assets.views.sam import (
     DeleteLicence,
     EditLicence,
     HistoryLicence,
-    LicenceList,
     LicenceBulkEdit,
+    LicenceConnectionsView,
+    LicenceList,
     SoftwareCategoryList,
 )
 from ralph_assets.views.support import (
@@ -265,10 +265,9 @@ urlpatterns = patterns(
         login_required(ReportDetail.as_view()),
         name='report_detail',
     ),
-
     url(
-        r'ajax-view/multi-form-row/$',
-        login_required(MultiFormRowAjaxView.as_view()),
-        name='multi_form_row',
+        r'sam/edit_licence/connections/(?P<licence_id>[0-9]+)$',
+        login_required(LicenceConnectionsView.as_view()),
+        name='licence_connections'
     ),
 )

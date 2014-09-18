@@ -167,3 +167,11 @@ form.form-inline {
 .report .level-4 .icon:before {margin-left: 60px;}
 .report .level-5 .zero .indented {margin-left: 96px;}
 .report .level-5 .icon:before {margin-left: 80px;}
+
+.licence-count-input {
+  width: 40px;
+}
+
+.delete_row input {
+  display: none;
+}

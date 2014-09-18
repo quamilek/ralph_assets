@@ -5,6 +5,8 @@
 {% block styles %}
     {{ block.super }}
     <link rel="stylesheet" href="{{ STATIC_URL }}assets/css/style.css">
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/ajax_select.css">
+
 {% endblock %}
 
 {% block scripts %}
@@ -30,6 +32,7 @@
             })
         });
     </script>
+        <script type="text/javascript" src="{{ STATIC_URL }}js/ajax_select.js"></script>
 {% endblock %}
 
 {% block contentarea %}
