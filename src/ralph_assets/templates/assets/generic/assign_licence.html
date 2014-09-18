@@ -1,0 +1,15 @@
+{% extends 'assets/base.html' %}
+
+{% block content %}
+<form method="post" action="">
+    {{ formset.management_form }}
+    {% csrf_token %}
+    <table>
+        {% for form in formset %}
+            {{ form }}
+            {{form.error}}
+        {% endfor %}
+    </table>
+    <button type="submit">Wyslij</button>
+</form>
+{% endblock %}

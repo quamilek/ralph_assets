@@ -131,8 +131,10 @@ from ajax_select.fields import (
 )
 from ralph_assets.forms import LOOKUPS
 
+from django.forms.models import modelformset_factory
 
-def assgined_form_factory(obj, base_model, field, lookup, extra_exclude=None):
+
+def assgined_formset_factory(obj, base_model, field, lookup, extra_exclude=None):
     obj_class_name = obj.__class__.__name__.lower()
     if obj_class_name == field:
         raise Exception('Nie można podawać takich samych pól')
@@ -143,19 +145,16 @@ def assgined_form_factory(obj, base_model, field, lookup, extra_exclude=None):
         def __init__(self, *args, **kwargs):
             super(Form, self).__init__(*args, **kwargs)
             self.fields[field] = AutoCompleteSelectField(lookup, required=True)
-            self.fields['id'] = forms.IntegerField()
 
         class Meta:
             model = base_model
             exclude = [obj_class_name] + (extra_exclude or [])
 
-        def clean(self, *args, **kwargs):
-            return super(Form, self).clean(*args, **kwargs)
-    return Form
-
-
-from django.forms.formsets import formset_factory
-# from django.forms.models import modelformset_factory
+    formset = modelformset_factory(
+        model=base_model,
+        form=Form,
+    )
+    return formset
 
 
 class AssginLicenceMixin(object):
@@ -172,19 +171,24 @@ class AssginLicenceMixin(object):
                                       ' get_base_model method.')
         return self.base_model
 
+    def get_base_field(self):
+        if not self.base_field:
+            raise NotImplementedError('Please specified base_field or override'
+                                      ' get_base_field method.')
+        return self.base_field
+
     def formset_valid(self, obj):
         raise NotImplementedError('Please override formset_valid method.')
 
     def dispatch(self, request, *args, **kwargs):
-        Form = assgined_form_factory(
-            obj=self.get_object(*args, **kwargs),
+        obj = self.get_object(*args, **kwargs)
+        queryset = self.get_base_model().objects.filter(asset=obj)
+        self.formset = assgined_formset_factory(
+            obj=obj,
             base_model=self.get_base_model(),
-            field='licence',
-            lookup=LOOKUPS['free_licences']
-        )
-        self.formset = formset_factory(
-            Form, extra=self.extra
-        )(request.POST or None)
+            field=self.get_base_field(),
+            lookup=self.lookup,
+        )(request.POST or None, queryset=queryset)
         return super(AssginLicenceMixin, self).dispatch(
             request, *args, **kwargs
         )
@@ -203,6 +207,8 @@ class AssginLicenceMixin(object):
 class AssginLicence(AssginLicenceMixin, AssetsBase):
     submodule_name = 'hardware'
     base_model = LicenceAsset
+    base_field = 'licence'
+    lookup = LOOKUPS['free_licences']
 
     def get_object(self, asset_id, *args, **kwargs):
         return Asset.objects.get(id=asset_id)
