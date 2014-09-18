@@ -56,7 +56,8 @@ class SoftwareCategoryNameColumn(DataTableColumn):
         name = super(
             SoftwareCategoryNameColumn, self
         ).render_cell_content(resource)
-        return '<a href="/assets/sam/licences/?{qs}">{name}</a>'.format(
+        return '<a href="{link}?{qs}">{name}</a>'.format(
+            link=reverse('licences_list'),
             qs=urllib.urlencode({'software_category': resource.id}),
             name=name,
         )

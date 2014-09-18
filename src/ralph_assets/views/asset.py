@@ -13,6 +13,7 @@ from django.http import HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 
 from ralph_assets.models import Asset
+from ralph_assets.licences.models import LicenceAsset
 from ralph_assets.models_assets import AssetType
 from ralph_assets.views.base import (
     ActiveSubmoduleByAssetMixin,
@@ -122,3 +123,93 @@ class AssetBulkEdit(ActiveSubmoduleByAssetMixin, BulkEditBase, _AssetSearch):
             _(('Please correct errors and check both "serial numbers" and '
                '"barcodes" for duplicates'))
         )
+
+
+from django import forms
+from ajax_select.fields import (
+    AutoCompleteSelectField,
+)
+from ralph_assets.forms import LOOKUPS
+
+
+def assgined_form_factory(obj, base_model, field, lookup, extra_exclude=None):
+    obj_class_name = obj.__class__.__name__.lower()
+    if obj_class_name == field:
+        raise Exception('Nie można podawać takich samych pól')
+    if obj.__class__ == base_model:
+        raise Exception('Nie można podawać takich samych modeli')
+
+    class Form(forms.ModelForm):
+        def __init__(self, *args, **kwargs):
+            super(Form, self).__init__(*args, **kwargs)
+            self.fields[field] = AutoCompleteSelectField(lookup, required=True)
+            self.fields['id'] = forms.IntegerField()
+
+        class Meta:
+            model = base_model
+            exclude = [obj_class_name] + (extra_exclude or [])
+
+        def clean(self, *args, **kwargs):
+            return super(Form, self).clean(*args, **kwargs)
+    return Form
+
+
+from django.forms.formsets import formset_factory
+# from django.forms.models import modelformset_factory
+
+
+class AssginLicenceMixin(object):
+    template_name = 'assets/generic/assign_licence.html'
+    extra = 1
+    base_model = None
+
+    def get_object(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def get_base_model(self):
+        if not self.base_model:
+            raise NotImplementedError('Please specified base_model or override'
+                                      ' get_base_model method.')
+        return self.base_model
+
+    def formset_valid(self, obj):
+        raise NotImplementedError('Please override formset_valid method.')
+
+    def dispatch(self, request, *args, **kwargs):
+        Form = assgined_form_factory(
+            obj=self.get_object(*args, **kwargs),
+            base_model=self.get_base_model(),
+            field='licence',
+            lookup=LOOKUPS['free_licences']
+        )
+        self.formset = formset_factory(
+            Form, extra=self.extra
+        )(request.POST or None)
+        return super(AssginLicenceMixin, self).dispatch(
+            request, *args, **kwargs
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super(AssginLicenceMixin, self).get_context_data(**kwargs)
+        context['formset'] = self.formset
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if self.formset.is_valid():
+            self.formset_valid(self.get_object(*args, **kwargs))
+        return self.get(request, *args, **kwargs)
+
+
+class AssginLicence(AssginLicenceMixin, AssetsBase):
+    submodule_name = 'hardware'
+    base_model = LicenceAsset
+
+    def get_object(self, asset_id, *args, **kwargs):
+        return Asset.objects.get(id=asset_id)
+
+    def formset_valid(self, obj):
+        for data in self.formset.cleaned_data:
+            data['licence'].assign(
+                obj,
+                data['quantity'],
+            )

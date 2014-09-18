@@ -120,7 +120,7 @@ class AssetMenu(Menu):
         licences = [
             {
                 'label': _('Search'),
-                'view_name': 'licence_list',
+                'view_name': 'licences_list',
                 'fugue_icon': 'fugue-magnifier',
             },
             {

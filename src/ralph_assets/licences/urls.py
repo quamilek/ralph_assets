@@ -50,9 +50,15 @@ urlpatterns = patterns(
         EditLicence.as_view(),
         name='edit_licence',
     ),
+)
+
+ajax_urlpatterns = patterns(
+    '',
     url(
         r'^count/$',
         CountLicence.as_view(),
         name='count_licences',
     ),
 )
+
+urlpatterns += ajax_urlpatterns

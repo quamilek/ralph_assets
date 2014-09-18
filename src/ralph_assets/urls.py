@@ -31,6 +31,7 @@ from ralph_assets.views.asset import (
     AssetSearch,
     AssetBulkEdit,
     DeleteAsset,
+    AssginLicence,
 )
 from ralph_assets.views.ajax import CategoryDependencyView, ModelDependencyView
 from ralph_assets.views.data_import import XlsUploadView
@@ -97,6 +98,11 @@ urlpatterns = patterns(
     url(r'(?P<mode>(back_office|dc))/edit/device/(?P<asset_id>[0-9]+)/$',
         login_required(EditDevice.as_view()),
         name='device_edit'),
+    url(
+        r'assign/licence/(?P<asset_id>[0-9]+)/$',
+        AssginLicence.as_view(),
+        name='asset_assign'
+    ),
     url(r'(?P<mode>(back_office|dc))/edit/part/(?P<asset_id>[0-9]+)/$',
         login_required(EditPart.as_view()),
         name='part_edit'),
