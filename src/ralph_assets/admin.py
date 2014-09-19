@@ -32,7 +32,7 @@ from ralph_assets.models import (
     Warehouse,
 )
 from ralph_assets.models_util import ImportProblem
-from ralph_assets.models_sam import LicenceType, SoftwareCategory
+from ralph_assets.licences.models import LicenceType, SoftwareCategory
 from ralph_assets.models_support import Support, SupportType
 
 

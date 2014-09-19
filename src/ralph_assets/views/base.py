@@ -9,10 +9,11 @@ import logging
 import json
 
 from bob.data_table import DataTableColumn
-from bob.menu import MenuItem
 from bob.views.bulk_edit import BulkEditBase as BobBulkEditBase
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.core.paginator import Paginator
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -21,11 +22,14 @@ from django.views.generic import TemplateView
 
 from ralph.ui.views.common import MenuMixin
 from ralph.account.models import Perm, ralph_permission
-from ralph_assets import VERSION, forms as assets_forms
+from ralph_assets import forms as assets_forms
 from ralph_assets.app import Assets as app
 from ralph_assets.models_assets import AssetType
 from ralph_assets.models import Asset
 from ralph_assets.forms import OfficeForm
+
+MAX_PAGE_SIZE = 65535
+HISTORY_PAGE_SIZE = 25
 
 logger = logging.getLogger(__name__)
 
@@ -122,99 +126,6 @@ class AssetsBase(ACLGateway, MenuMixin, TemplateView):
             raise Exception("No form class named: {}".format(form_class_name))
         return form_class
 
-    def get_mainmenu_items(self):
-        mainmenu = [
-            MenuItem(
-                fugue_icon='fugue-building',
-                href=reverse('asset_search', kwargs={'mode': 'dc'}),
-                label=_('Data center'),
-                name='dc',
-            ),
-            MenuItem(
-                fugue_icon='fugue-printer',
-                href=reverse('asset_search', kwargs={'mode': 'back_office'}),
-                label=_('BackOffice'),
-                name='back_office',
-            ),
-            MenuItem(
-                fugue_icon='fugue-lifebuoy',
-                href=reverse('support_list'),
-                label=_('Supports'),
-                name='supports',
-            ),
-            MenuItem(
-                fugue_icon='fugue-user-green-female',
-                href=reverse('user_list'),
-                label=_('User list'),
-                name='user list',
-            ),
-            MenuItem(
-                fugue_icon='fugue-cheque',
-                href=reverse('licence_list'),
-                label=_('Licences'),
-                name='licences',
-            ),
-            MenuItem(
-                fugue_icon='fugue-table',
-                href=reverse('assets_reports'),
-                label=_('Reports'),
-                name='reports',
-            ),
-        ]
-        return mainmenu
-
-    def get_footer_items(self, details):
-        footer_items = []
-        if settings.BUGTRACKER_URL:
-            footer_items.append(
-                MenuItem(
-                    fugue_icon='fugue-bug',
-                    href=settings.BUGTRACKER_URL,
-                    label=_('Report a bug'),
-                    pull_right=True,
-                )
-            )
-        footer_items.append(
-            MenuItem(
-                fugue_icon='fugue-document-number',
-                href=settings.ASSETS_CHANGELOG_URL,
-                label=_(
-                    "Version {version}".format(
-                        version='.'.join((str(part) for part in VERSION)),
-                    ),
-                ),
-            )
-        )
-        if self.request.user.is_staff:
-            footer_items.append(
-                MenuItem(
-                    fugue_icon='fugue-toolbox',
-                    href='/admin',
-                    label=_('Admin'),
-                )
-            )
-        footer_items.append(
-            MenuItem(
-                fugue_icon='fugue-user',
-                href=reverse('user_preference', args=[]),
-                label=_('{user} (preference)'.format(user=self.request.user)),
-                pull_right=True,
-                view_args=[details or 'info', ''],
-                view_name='preference',
-            )
-        )
-        footer_items.append(
-            MenuItem(
-                fugue_icon='fugue-door-open-out',
-                href=settings.LOGOUT_URL,
-                label=_('logout'),
-                pull_right=True,
-                view_args=[details or 'info', ''],
-                view_name='logout',
-            )
-        )
-        return footer_items
-
 
 class DataTableColumnAssets(DataTableColumn):
     """
@@ -290,3 +201,60 @@ class JsonResponseMixin(object):
         return HttpResponse(
             content, content_type=self.content_type, status=status
         )
+
+
+class PaginateMixin(object):
+    paginate_queryset = None
+    query_variable_name = 'page'
+
+    def get_paginate_queryset(self):
+        if not self.paginate_queryset:
+            raise Exception(
+                'Please specified ``paginate_queryset`` or '
+                'override ``get_paginate_queryset`` method.',
+            )
+        return self.paginate_queryset
+
+    def get_context_data(self, **kwargs):
+        context = super(PaginateMixin, self).get_context_data(**kwargs)
+        try:
+            page = int(self.request.GET.get(self.query_variable_name, 1))
+        except ValueError:
+            page = 1
+        if page == 0:
+            page = 1
+            page_size = MAX_PAGE_SIZE
+        else:
+            page_size = HISTORY_PAGE_SIZE
+        page_content = Paginator(
+            self.get_paginate_queryset(), page_size
+        ).page(page)
+        context.update({
+            'page_content': page_content,
+            'query_variable_name': self.query_variable_name,
+        })
+        return context
+
+
+class ContentTypeMixin(object):
+    """Helper for views. This mixin add model, content_type, object_id,
+    content_type_id."""
+    content_type_id_kwarg_name = 'content_type'
+    object_id_kwarg_name = 'object_id'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.content_type_id = kwargs[self.content_type_id_kwarg_name]
+        self.content_type = ContentType.objects.get(pk=self.content_type_id)
+        self.model = self.content_type.model_class()
+        self.object_id = kwargs[self.object_id_kwarg_name]
+        return super(ContentTypeMixin, self).dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super(ContentTypeMixin, self).get_context_data(**kwargs)
+        context.update({
+            'content_type': self.content_type,
+            'content_type_id': self.content_type_id,
+            'object_id': self.object_id,
+            'content_object': self.model.objects.get(pk=self.object_id),
+        })
+        return context

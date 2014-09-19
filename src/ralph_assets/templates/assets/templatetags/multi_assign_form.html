@@ -2,6 +2,8 @@
 <tr>
   <td style="vertical-align:middle" class="ordinal" data-no="{{ counter }}">
     {{ counter }}
+  {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+          {{ form.id }}
   </td>
   {% for field in form %}
     <td class="control-group{% if "-support_period" in field.html_name %} small{% endif %}{% if field.errors %} error{% endif %}" style="vertical-align:middle">

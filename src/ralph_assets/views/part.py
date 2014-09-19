@@ -20,7 +20,6 @@ from ralph_assets.forms import (
     OfficeForm,
 )
 from ralph_assets.models import Asset
-from ralph_assets.models_history import AssetHistoryChange
 from ralph_assets.views.base import (
     AssetsBase,
     SubmoduleModeMixin,
@@ -120,22 +119,17 @@ class EditPart(SubmoduleModeMixin, AssetsBase):
         self.office_info_form = None
 
     def get_context_data(self, **kwargs):
-        ret = super(EditPart, self).get_context_data(**kwargs)
-        status_history = AssetHistoryChange.objects.all().filter(
-            asset=kwargs.get('asset_id'), field_name__exact='status'
-        ).order_by('-date')
-        ret.update({
+        context = super(EditPart, self).get_context_data(**kwargs)
+        context.update({
             'asset_form': self.asset_form,
             'office_info_form': self.office_info_form,
             'part_info_form': self.part_info_form,
             'form_id': 'edit_part_form',
             'edit_mode': True,
-            'status_history': status_history,
-            'history_link': self.get_history_link(),
             'parent_link': self.get_parent_link(),
             'asset': self.asset,
         })
-        return ret
+        return context
 
     def get(self, *args, **kwargs):
         self.initialize_vars()
@@ -214,9 +208,3 @@ class EditPart(SubmoduleModeMixin, AssetsBase):
                 'asset_id': asset.id,
                 'mode': self.mode,
             })
-
-    def get_history_link(self):
-        return reverse('part_history', kwargs={
-            'asset_id': self.asset.id,
-            'mode': self.mode,
-        })

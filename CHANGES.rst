@@ -1,12 +1,12 @@
 Change Log
 ----------
 
-
 DEV:
 ~~~~
 To be announced
 
-* added two fields to asset forms ('service catalog', 'environment')
+* Added two fields to asset forms ('service catalog', 'environment')
+* Refactored history mechanism (more flexible)
 
 
 2.2.0

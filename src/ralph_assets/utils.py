@@ -5,6 +5,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from ajax_select.fields import AutoCompleteSelectField
+from django import forms
+from django.forms.models import modelformset_factory
+
 
 ISO_3166 = (
     ('AF', 'AFG'), ('AX', 'ALA'), ('AL', 'ALB'), ('DZ', 'DZA'), ('AS', 'ASM'),
@@ -61,3 +65,48 @@ ISO_3166 = (
 
 iso2_to_iso3 = {k: v for k, v in ISO_3166}
 iso3_to_iso2 = {v: k for k, v in ISO_3166}
+
+
+class IntegerWidget(forms.TextInput):
+    input_type = 'number'
+
+
+def assigned_formset_factory(obj, base_model, field, lookup,
+                             extra=1, extra_exclude=None):
+    obj_class_name = obj.__class__.__name__.lower()
+    if obj_class_name == field:
+        raise Exception('Nie można podawać takich samych pól')
+    if obj.__class__ == base_model:
+        raise Exception('Nie można podawać takich samych modeli')
+
+    class Form(forms.ModelForm):
+        def __init__(self, *args, **kwargs):
+            super(Form, self).__init__(*args, **kwargs)
+            self.fields[field] = AutoCompleteSelectField(lookup, required=True)
+            self.fields[obj.__class__.__name__.lower()].widget = forms.HiddenInput()
+            self.fields['delete'] = forms.BooleanField(
+                required=False,
+                widget=forms.CheckboxInput(),
+            )
+            self.fields['quantity'] = forms.IntegerField(
+                min_value=1,
+                widget=IntegerWidget(attrs={
+                    'type': 'number',
+                    'min': 1,
+                    'step': 1,
+                    'class': 'licence-count-input',
+                }),
+                initial=1,
+            )
+
+        class Meta:
+            model = base_model
+            exclude = extra_exclude or []
+
+    formset = modelformset_factory(
+        model=base_model,
+        form=Form,
+        extra=extra,
+        can_delete=False,
+    )
+    return formset

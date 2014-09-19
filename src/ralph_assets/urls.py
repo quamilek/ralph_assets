@@ -31,35 +31,19 @@ from ralph_assets.views.asset import (
     AssetSearch,
     AssetBulkEdit,
     DeleteAsset,
-    HistoryAsset,
 )
 from ralph_assets.views.ajax import (
     CategoryDependencyView,
     ModelDependencyView,
 )
 from ralph_assets.views.data_import import XlsUploadView
-from ralph_assets.views.sam import (
-    AddLicence,
-    CountLicence,
-    DeleteLicence,
-    EditLicence,
-    HistoryLicence,
-    LicenceBulkEdit,
-    LicenceConnectionsView,
-    LicenceList,
-    SoftwareCategoryList,
-)
 from ralph_assets.views.support import (
     SupportList,
     AddSupportView,
     EditSupportView,
     DeleteSupportView,
-    HistorySupport,
 )
-from ralph_assets.views.invoice_report import (
-    AssetInvoiceReport,
-    LicenceInvoiceReport,
-)
+from ralph_assets.views.invoice_report import AssetInvoiceReport
 from ralph_assets.forms_import import XLS_UPLOAD_FORMS
 from ralph_assets.views.transition import (
     TransitionView,
@@ -125,12 +109,6 @@ urlpatterns = patterns(
     url(r'ajax/dependencies/model/$',
         ModelDependencyView.as_view(),
         name='model_dependency_view'),
-    url(r'(?P<mode>(back_office|dc))/history/device/(?P<asset_id>[0-9]+)/$',
-        login_required(HistoryAsset.as_view()),
-        name='device_history'),
-    url(r'(?P<mode>(back_office|dc))/history/part/(?P<asset_id>[0-9]+)/$',
-        login_required(HistoryAsset.as_view()),
-        name='part_history'),
     url(r'(?P<mode>(back_office|dc))/bulkedit/$',
         login_required(AssetBulkEdit.as_view()),
         name='bulkedit'),
@@ -144,11 +122,6 @@ urlpatterns = patterns(
         r'(?P<mode>(back_office|dc))/invoice_report/$',
         login_required(AssetInvoiceReport.as_view()),
         name='assets_invoice_report',
-    ),
-    url(
-        r'sam/licences/invoice_report/$',
-        login_required(LicenceInvoiceReport.as_view()),
-        name='sam_invoice_report',
     ),
     url(
         r'(?P<mode>(back_office|dc))/transition/$',
@@ -166,36 +139,6 @@ urlpatterns = patterns(
         name='xls_upload',
     ),
     url(
-        r'sam/categories/$',
-        login_required(SoftwareCategoryList.as_view()),
-        name='software_categories',
-    ),
-    url(
-        r'sam/licences/$',
-        login_required(LicenceList.as_view()),
-        name='licence_list',
-    ),
-    url(
-        r'sam/licences/bulkedit/',
-        login_required(LicenceBulkEdit.as_view()),
-        name='licence_bulkedit',
-    ),
-    url(
-        r'sam/add_licence/$',
-        login_required(AddLicence.as_view()),
-        name='add_licence',
-    ),
-    url(
-        r'sam/edit_licence/(?P<licence_id>[0-9]+)$',
-        login_required(EditLicence.as_view()),
-        name='edit_licence',
-    ),
-    url(
-        r'sam/count_licences/$',
-        login_required(CountLicence.as_view()),
-        name='count_licences',
-    ),
-    url(
         r'support/$',
         login_required(SupportList.as_view()),
         name='support_list',
@@ -211,19 +154,9 @@ urlpatterns = patterns(
         name='edit_support',
     ),
     url(
-        r'support/history/(?P<support_id>[0-9]+)/$',
-        login_required(HistorySupport.as_view()),
-        name='support_history',
-    ),
-    url(
         r'support/delete/$',
         login_required(DeleteSupportView.as_view()),
         name='delete_support',
-    ),
-    url(
-        r'(?P<mode>(back_office|dc))/sam/delete/$',
-        login_required(DeleteLicence.as_view()),
-        name='delete_licence',
     ),
     url(
         r'delete/(?P<parent>(asset|license|support))/attachment/$',
@@ -246,11 +179,6 @@ urlpatterns = patterns(
         name='user_view',
     ),
     url(
-        r'history/licence/(?P<licence_id>[0-9]+)/$',
-        login_required(HistoryLicence.as_view()),
-        name='licence_history',
-    ),
-    url(
         r'transition-history-file/(?P<history_id>[0-9]+)$',
         login_required(TransitionHistoryFileHandler.as_view()),
         name='transition_history_file',
@@ -266,8 +194,11 @@ urlpatterns = patterns(
         name='report_detail',
     ),
     url(
-        r'sam/edit_licence/connections/(?P<licence_id>[0-9]+)$',
-        login_required(LicenceConnectionsView.as_view()),
-        name='licence_connections'
+        r'^licences/',
+        include('ralph_assets.licences.urls', app_name='licences'),
+    ),
+    url(
+        r'^history/',
+        include('ralph_assets.history.urls', app_name='history'),
     ),
 )

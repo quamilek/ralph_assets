@@ -12,6 +12,10 @@ from django.test import TestCase
 from django.core.urlresolvers import reverse
 
 
+from ralph.cmdb.tests.utils import (
+    DeviceEnvironmentFactory,
+    ServiceCatalogFactory,
+)
 from ralph_assets.tests.util import create_model
 from ralph_assets.tests.utils import sam
 from ralph_assets.tests.utils.assets import (
@@ -666,7 +670,7 @@ class TestSearchEngine(TestCase):
 
     def test_manufacturer_exact(self):
         urls = self.testing_urls.copy()
-        urls['license'] = reverse('licence_list')
+        urls['license'] = reverse('licences_list')
         field_name = 'manufacturer'
         for url in urls.values():
             self._check_results_length(url, field_name, '"Sony"', 1)
@@ -676,7 +680,7 @@ class TestSearchEngine(TestCase):
 
     def test_manufacturer_icontains(self):
         urls = self.testing_urls.copy()
-        urls['license'] = reverse('licence_list')
+        urls['license'] = reverse('licences_list')
         field_name = 'manufacturer'
         for url in urls.values():
             self._check_results_length(url, field_name, 'Sony', 2)
@@ -723,6 +727,58 @@ class TestSearchEngine(TestCase):
             (self.testing_urls['dc'], field_name, 'none', 0),
             (self.testing_urls['bo'], field_name, 'POLPC2', 2),
             (self.testing_urls['bo'], field_name, '20001', 1),
+            (self.testing_urls['bo'], field_name, 'none', 0),
+        ])
+
+    def test_service(self):
+        DCAssetFactory(service=ServiceCatalogFactory(name='dc-service.com'))
+        DCAssetFactory(service=ServiceCatalogFactory(name='dc-service2.com'))
+        BOAssetFactory(service=ServiceCatalogFactory(name='bo-service.com'))
+        BOAssetFactory(service=ServiceCatalogFactory(name='bo-service2.com'))
+
+        field_name = 'service'
+        self._check_search_result_count([
+            # exact check
+            (self.testing_urls['dc'], field_name, '"dc-service.com"', 1),
+            (self.testing_urls['dc'], field_name, 'fake-dc', 0),
+            (self.testing_urls['bo'], field_name, '"bo-service.com"', 1),
+            (self.testing_urls['bo'], field_name, 'fake-bo', 0),
+            # icontains check
+            (self.testing_urls['dc'], field_name, 'dc', 2),
+            (self.testing_urls['dc'], field_name, 'dc-service2', 1),
+            (self.testing_urls['dc'], field_name, 'none', 0),
+            (self.testing_urls['bo'], field_name, 'bo', 2),
+            (self.testing_urls['bo'], field_name, 'bo-service2', 1),
+            (self.testing_urls['bo'], field_name, 'none', 0),
+        ])
+
+    def test_device_environment(self):
+        DCAssetFactory(
+            device_environment=DeviceEnvironmentFactory(name='dc-dev-env'),
+        )
+        DCAssetFactory(
+            device_environment=DeviceEnvironmentFactory(name='dc-dev-env2'),
+        )
+        BOAssetFactory(
+            device_environment=DeviceEnvironmentFactory(name='bo-dev-env'),
+        )
+        BOAssetFactory(
+            device_environment=DeviceEnvironmentFactory(name='bo-dev-env2'),
+        )
+
+        field_name = 'device_environment'
+        self._check_search_result_count([
+            # exact check
+            (self.testing_urls['dc'], field_name, '"dc-dev-env"', 1),
+            (self.testing_urls['dc'], field_name, 'fake-dc', 0),
+            (self.testing_urls['bo'], field_name, '"bo-dev-env"', 1),
+            (self.testing_urls['bo'], field_name, 'fake-bo', 0),
+            # icontains check
+            (self.testing_urls['dc'], field_name, 'dc', 2),
+            (self.testing_urls['dc'], field_name, 'dc-dev-env2', 1),
+            (self.testing_urls['dc'], field_name, 'none', 0),
+            (self.testing_urls['bo'], field_name, 'bo', 2),
+            (self.testing_urls['bo'], field_name, 'bo-dev-env2', 1),
             (self.testing_urls['bo'], field_name, 'none', 0),
         ])
 

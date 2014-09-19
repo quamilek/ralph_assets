@@ -6,18 +6,22 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
+from unittest import skip
+
 from django.test import TestCase
 
 from ralph.discovery.models_device import Device, DeviceType
 
 from ralph_assets.api_pricing import get_assets, get_asset_parts
 from ralph_assets.models_assets import PartInfo
+from ralph_assets.licences.models import LicenceAsset, Licence
 from ralph_assets.tests.utils.assets import (
     AssetSubCategoryFactory,
     AssetModelFactory,
     AssetFactory,
+    ServiceFactory,
 )
-from ralph_assets.tests.utils.assets import ServiceFactory
+from ralph_assets.tests.utils.supports import DCSupportFactory
 from ralph_assets.tests.utils.sam import LicenceFactory
 
 
@@ -107,6 +111,80 @@ class TestModelLicences(TestCase):
 
         self.assertNotEqual(old_service, self.licence.service_name)
 
+    def test_assign_asset_to_licence(self):
+        """Simple assign asset to licence."""
+        asset = AssetFactory()
+        self.licence.assign(obj=asset)
+        self.assertEqual(LicenceAsset.objects.all().count(), 1)
+        self.assertEqual(LicenceAsset.objects.all()[0].quantity, 1)
+        self.assertEqual(self.licence.used, 1)
+
+    def test_assign_asset_to_support(self):
+        """Assign not supported object to licence."""
+        asset = DCSupportFactory()
+        with self.assertRaises(Exception):
+            self.licence.assign(obj=asset)
+
+    def test_assign_asset_to_licence_zero_quantity(self):
+        """Simple assign asset to licence with zero quantity."""
+        asset = AssetFactory()
+        with self.assertRaises(ValueError):
+            self.licence.assign(obj=asset, quantity=0)
+
+    def test_update_assign_asset_to_licence(self):
+        """Simple update assign asset to licence."""
+        asset = AssetFactory()
+        self.licence.assign(obj=asset)
+        self.assertEqual(LicenceAsset.objects.all().count(), 1)
+        self.assertEqual(LicenceAsset.objects.all()[0].quantity, 1)
+        self.assertEqual(self.licence.used, 1)
+
+        self.licence = Licence.objects.get(pk=self.licence.pk)
+        self.licence.assign(obj=asset, quantity=10)
+        self.assertEqual(LicenceAsset.objects.all().count(), 1)
+        self.assertEqual(LicenceAsset.objects.all()[0].quantity, 10)
+        self.assertEqual(self.licence.used, 10)
+
+    def test_assign_asset_to_licence_custom_number_of_used(self):
+        """Simple assign asset to licence with custom number of used."""
+        asset = AssetFactory()
+        consume_by_asset = 5
+        self.licence.assign(obj=asset, quantity=consume_by_asset)
+        self.assertEqual(LicenceAsset.objects.all().count(), 1)
+        self.assertEqual(
+            LicenceAsset.objects.all()[0].quantity, consume_by_asset
+        )
+        self.assertEqual(self.licence.used, consume_by_asset)
+
+    def test_detach(self):
+        """Detach asset from licence."""
+        asset = AssetFactory()
+        self.licence.assign(obj=asset)
+        self.licence.detach(obj=asset)
+        self.assertEqual(LicenceAsset.objects.all().count(), 0)
+        self.assertEqual(self.licence.used, 0)
+
+    def test_detach_does_not_exist(self):
+        """Detach asset from licence but licence doesn't assgin to asset."""
+        asset = AssetFactory()
+        self.licence.detach(obj=asset)
+        self.assertEqual(LicenceAsset.objects.all().count(), 0)
+        self.assertEqual(self.licence.used, 0)
+
+    @skip('TODO')
+    def test_reached_free_limit(self):
+        """All licences is assigned."""
+        asset = AssetFactory()
+        asset2 = AssetFactory()
+        self.licence.number_bought = 25
+        self.licence.save()
+        self.licence.assign(obj=asset, quantity=self.licence.number_bought)
+        self.assertEqual(self.licence.used, self.licence.number_bought)
+        self.assertEqual(self.licence.free, 0)
+
+        with self.assertRaises(Exception):
+            self.licence.assign(obj=asset2, quantity=1)
+
 
 class TestApiAssets(TestCase):
     def setUp(self):
@@ -161,3 +239,30 @@ class TestApiAssets(TestCase):
             self.assertEqual(item['asset_id'], self.asset2.id)
             self.assertEqual(item['sn'], self.asset.sn)
             self.assertEqual(item['barcode'], self.asset.barcode)
+
+
+class TestModelHistory(TestCase):
+
+    def test_asset(self):
+        asset = AssetFactory(pk=123)
+        history = asset.get_history()
+        self.assertEqual(0, history.count())
+
+        asset.sn = '123'
+        asset.save()
+        self.assertEqual(1, history.count())
+
+        asset.sn = '1233'
+        asset.save()
+        self.assertEqual(2, history.count())
+
+        licence = LicenceFactory()
+        history = licence.get_history()
+        licence.save()
+        licence.save()
+        self.assertEqual(0, history.count())
+
+        history = asset.get_history()
+        for i in xrange(5):
+            licence.assign(asset, i + 1)
+            self.assertEqual(i + 3, history.count())

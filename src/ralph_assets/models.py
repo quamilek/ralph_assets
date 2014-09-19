@@ -32,13 +32,12 @@ from ralph_assets.models_assets import (
     Service,
     Warehouse,
 )
-from ralph_assets.models_sam import (
+from ralph_assets.licences.models import (
     Licence,
     LicenceType,
     SoftwareCategory,
 )
-from ralph_assets.models_history import AssetHistoryChange
-from ralph_assets.models_support import Support  # noqa
+from ralph_assets.models_support import Support
 from ralph_assets.models_transition import (
     Action,
     Transition,
@@ -481,5 +480,4 @@ __all__ = [
     'BODeviceLookup',
     'DCAssetModelLookup',
     'BOAssetModelLookup',
-    'AssetHistoryChange',
 ]

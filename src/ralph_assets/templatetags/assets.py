@@ -73,3 +73,10 @@ def multi_assign_widget(empty_formset, formset):
 @register.inclusion_tag('assets/templatetags/multi_assign_form.html')
 def multi_assign_form(form, counter=''):
     return {'form': form, 'counter': counter}
+
+
+@register.inclusion_tag(
+    'assets/templatetags/mode_switch.html', takes_context=True,
+)
+def mode_switch(context):
+    return {'mode': context['mode']}

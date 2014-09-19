@@ -89,7 +89,8 @@ asset_search_back_office_fieldsets = lambda: OrderedDict([
         'collapsed': [
             'warehouse', 'task_url', 'category', 'loan_end_date_from',
             'loan_end_date_to', 'part_info', 'niw', 'manufacturer',
-            'service_name', 'location', 'remarks',
+            'service_name', 'location', 'remarks', 'service',
+            'device_environment',
         ],
     }),
     ('User data', {
@@ -122,7 +123,7 @@ asset_search_dc_fieldsets = lambda: OrderedDict([
         'collapsed': [
             'status', 'task_url', 'category', 'loan_end_date_from',
             'loan_end_date_to', 'part_info', 'niw', 'service_name',
-            'location', 'remarks',
+            'location', 'remarks', 'service', 'device_environment',
         ],
     }),
     ('User data', {
@@ -149,21 +150,22 @@ asset_search_dc_fieldsets = lambda: OrderedDict([
 LOOKUPS = {
     'asset': ('ralph_assets.models', 'DeviceLookup'),
     'asset_all': ('ralph_assets.models', 'AssetLookup'),
-    'linked_device': ('ralph_assets.models', 'LinkedDeviceNameLookup'),
     'asset_bodevice': ('ralph_assets.models', 'BODeviceLookup'),
     'asset_bomodel': ('ralph_assets.models', 'BOAssetModelLookup'),
     'asset_dcdevice': ('ralph_assets.models', 'DCDeviceLookup'),
     'asset_dcmodel': ('ralph_assets.models', 'DCAssetModelLookup'),
-    'manufacturer': ('ralph_assets.models', 'ManufacturerLookup'),
     'asset_model': ('ralph_assets.models', 'AssetModelLookup'),
     'asset_user': ('ralph_assets.models', 'UserLookup'),
     'asset_warehouse': ('ralph_assets.models', 'WarehouseLookup'),
-    'budget_info': ('ralph_assets.models_sam', 'BudgetInfoLookup'),
+    'budget_info': ('ralph_assets.licences.models', 'BudgetInfoLookup'),
+    'device_environment': ('ralph.ui.channels', 'DeviceEnvrionment'),
     'free_licences': ('ralph_assets.models', 'FreeLicenceLookup'),
     'licence': ('ralph_assets.models', 'LicenceLookup'),
+    'linked_device': ('ralph_assets.models', 'LinkedDeviceNameLookup'),
+    'manufacturer': ('ralph_assets.models', 'ManufacturerLookup'),
     'ralph_device': ('ralph_assets.models', 'RalphDeviceLookup'),
-    'softwarecategory': ('ralph_assets.models', 'SoftwareCategoryLookup'),
     'service': ('ralph.ui.channels', 'ServiceCatalogLookup'),
+    'softwarecategory': ('ralph_assets.models', 'SoftwareCategoryLookup'),
     'support': ('ralph_assets.models', 'SupportLookup'),
 }
 
@@ -1002,7 +1004,6 @@ class BaseEditAssetForm(DependencyAssetForm, AddEditAssetMixin, ModelForm):
             'request_date',
             'required_support',
             'service_name',
-            'slots',
             'sn',
             'source',
             'status',
@@ -1365,7 +1366,7 @@ class DataCenterEditDeviceForm(EditDeviceForm):
 
     class Meta(BaseEditAssetForm.Meta):
         fields = BaseEditAssetForm.Meta.fields + (
-            'device_environment', 'service',
+            'device_environment', 'service', 'slots',
         )
     device_environment = ModelChoiceField(
         required=True,
@@ -1596,6 +1597,16 @@ class SearchAssetForm(Form):
         required=False,
         choices=[('', '----'), ('any', 'any'), ('none', 'none')],
         label=_('Assigned supports'),
+    )
+    device_environment = AutoCompleteField(
+        LOOKUPS['device_environment'],
+        label=_('Environment'),
+        required=False,
+    )
+    service = AutoCompleteField(
+        LOOKUPS['service'],
+        label=_('Service catalog'),
+        required=False,
     )
 
     def __init__(self, *args, **kwargs):

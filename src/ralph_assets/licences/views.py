@@ -11,7 +11,6 @@ import urllib
 from bob.data_table import DataTableColumn
 
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.core.urlresolvers import reverse
 from django.db.models import Sum, Count
 from django.forms.models import formset_factory
@@ -23,7 +22,7 @@ from ralph_assets.forms_multi import (
     AssetLicenceAssignForm,
     UserLicenceAssignForm,
 )
-from ralph_assets.forms_sam import (
+from ralph_assets.licences.forms import (
     SoftwareCategorySearchForm,
     LicenceSearchForm,
     AddLicenceForm,
@@ -32,23 +31,17 @@ from ralph_assets.forms_sam import (
 )
 from ralph_assets.views.base import SubmoduleModeMixin
 from ralph_assets.models_assets import MODE2ASSET_TYPE
-from ralph_assets.models_history import LicenceHistoryChange
-from ralph_assets.models_sam import (
+from ralph_assets.licences.models import (
     Licence,
+    LicenceAsset,
     SoftwareCategory,
 )
-from ralph_assets.models_assets import ASSET_TYPE2MODE
-from ralph_assets.views.asset import (
-    Asset,
-    HISTORY_PAGE_SIZE,
-    MAX_PAGE_SIZE,
-)
+from ralph_assets.utils import assigned_formset_factory
 from ralph_assets.views.base import (
     AssetsBase,
     AjaxMixin,
     BulkEditBase,
     JsonResponseMixin,
-    get_return_link,
 )
 from ralph_assets.views.search import GenericSearch
 
@@ -72,7 +65,8 @@ class SoftwareCategoryNameColumn(DataTableColumn):
         name = super(
             SoftwareCategoryNameColumn, self
         ).render_cell_content(resource)
-        return '<a href="/assets/sam/licences/?{qs}">{name}</a>'.format(
+        return '<a href="{link}?{qs}">{name}</a>'.format(
+            link=reverse('licences_list'),
             qs=urllib.urlencode({'software_category': resource.id}),
             name=name,
         )
@@ -230,7 +224,10 @@ class LicenceFormView(LicenceBaseView):
             if licence.asset_type is None:
                 licence.asset_type = MODE2ASSET_TYPE[self.mode]
             licence.save()
-            self.form.save_m2m()
+            # TODO: manually save attachments, users, assets
+            # save_m2m() doesn't support models where in many-to-many field
+            # is specified `through` attr
+            # self.form.save_m2m()
             messages.success(self.request, self.message)
             return HttpResponseRedirect(licence.url)
         except ValueError:
@@ -263,7 +260,7 @@ class AddLicence(LicenceFormView):
             messages.success(self.request, '{} licences added'.format(len(
                 self.form.cleaned_data['niw'],
             )))
-            return HttpResponseRedirect(reverse('licence_list'))
+            return HttpResponseRedirect(reverse('licences_list'))
         else:
             return super(AddLicence, self).get(request, *args, **kwargs)
 
@@ -290,58 +287,6 @@ class LicenceBulkEdit(BulkEditBase, LicenceBaseView):
     model = Licence
     template_name = 'assets/bulk_edit.html'
     form_bulk = BulkEditLicenceForm
-
-
-class DeleteLicence(AssetsBase):
-    """Delete a licence."""
-
-    def post(self, *args, **kwargs):
-        record_id = self.request.POST.get('record_id')
-        try:
-            licence = Licence.objects.get(pk=record_id)
-        except Asset.DoesNotExist:
-            messages.error(self.request, _("Selected asset doesn't exists."))
-            return HttpResponseRedirect(get_return_link(self.mode))
-        self.back_to = reverse(
-            'licence_list',
-            kwargs={'mode': ASSET_TYPE2MODE[licence.asset_type]},
-        )
-        licence.delete()
-        return HttpResponseRedirect(self.back_to)
-
-
-class HistoryLicence(AssetsBase):
-    template_name = 'assets/history.html'
-    mainmenu_selected = 'licences'
-
-    def get_context_data(self, **kwargs):
-        query_variable_name = 'history_page'
-        ret = super(HistoryLicence, self).get_context_data(**kwargs)
-        licence_id = kwargs.get('licence_id')
-        licence = Licence.objects.get(id=licence_id)
-        history = LicenceHistoryChange.objects.filter(
-            licence=licence,
-        ).order_by('-date')
-        try:
-            page = int(self.request.GET.get(query_variable_name, 1))
-        except ValueError:
-            page = 1
-        if page == 0:
-            page = 1
-            page_size = MAX_PAGE_SIZE
-        else:
-            page_size = HISTORY_PAGE_SIZE
-        history_page = Paginator(history, page_size).page(page)
-        ret.update({
-            'history': history,
-            'history_page': history_page,
-            'show_status_button': False,
-            'query_variable_name': query_variable_name,
-            'object': licence,
-            'object_url': licence.url,
-            'title': _('History licence'),
-        })
-        return ret
 
 
 class CountLicence(AjaxMixin, JsonResponseMixin, GenericSearch):
@@ -410,3 +355,82 @@ class LicenceConnectionsView(SubmoduleModeMixin, AssetsBase):
             'caption': _('Edit Licence relations')
         })
         return context
+
+
+class AssginLicenceMixin(object):
+    template_name = 'assets/generic/assign_licence.html'
+    base_model = None
+
+    def get_object(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def get_base_model(self):
+        if not self.base_model:
+            raise NotImplementedError('Please specified base_model or override'
+                                      ' get_base_model method.')
+        return self.base_model
+
+    def get_base_field(self):
+        if not self.base_field:
+            raise NotImplementedError('Please specified base_field or override'
+                                      ' get_base_field method.')
+        return self.base_field
+
+    def formset_save(self, obj):
+        raise NotImplementedError('Please override formset_valid method.')
+
+    def dispatch(self, request, *args, **kwargs):
+        obj = self.get_object(*args, **kwargs)
+        query_kwargs = {obj.__class__.__name__.lower(): obj}
+        queryset = self.get_base_model().objects.filter(**query_kwargs)
+        self.empty_formset = assigned_formset_factory(
+            obj=obj,
+            base_model=self.get_base_model(),
+            field=self.get_base_field(),
+            lookup=self.lookup,
+        )(queryset=self.get_base_model().objects.none())
+
+        self.formset = assigned_formset_factory(
+            obj=obj,
+            base_model=self.get_base_model(),
+            field=self.get_base_field(),
+            lookup=self.lookup,
+            extra=0
+        )(request.POST or None, queryset=queryset)
+        return super(AssginLicenceMixin, self).dispatch(
+            request, *args, **kwargs
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super(AssginLicenceMixin, self).get_context_data(**kwargs)
+        context.update({
+            'formset': self.formset,
+            'empty_formset': self.empty_formset,
+        })
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if self.formset.is_valid():
+            self.formset.save()
+            # self.formset_save(self.get_object(*args, **kwargs))
+        return self.get(request, *args, **kwargs)
+
+
+from ralph_assets.forms import LOOKUPS
+
+
+class AssginAsset2Licence(AssginLicenceMixin, AssetsBase):
+    submodule_name = 'hardware'
+    base_model = LicenceAsset
+    base_field = 'asset'
+    lookup = LOOKUPS['linked_device']
+
+    def get_object(self, licence_id, *args, **kwargs):
+        return Licence.objects.get(id=licence_id)
+
+    def formset_save(self, obj):
+        for data in self.formset.cleaned_data:
+            obj.assign(
+                data[self.base_field],
+                data['quantity'],
+            )

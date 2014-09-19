@@ -15,7 +15,7 @@ from django.test.utils import override_settings
 from ralph.discovery.tests.util import DeviceFactory
 from ralph_assets.models import AssetManufacturer
 from ralph_assets import models_assets
-from ralph_assets.models_sam import (
+from ralph_assets.licences.models import (
     AssetOwner,
     Licence,
     LicenceType,
@@ -119,9 +119,9 @@ class TestExportRelations(TestCase):
         )
 
     def test_licences_rows(self):
-        self.licence1.assets.add(self.asset)
-        self.licence1.users.add(self.user)
-        self.licence1.users.add(self.owner)
+        self.licence1.assign(self.asset)
+        self.licence1.assign(self.user)
+        self.licence1.assign(self.owner)
         rows = [item for item in get_licences_rows()]
 
         self.assertEqual(
@@ -160,9 +160,9 @@ class TestExportRelations(TestCase):
         )
 
     def test_licences_rows_only_assigned(self):
-        self.licence1.assets.add(self.asset)
-        self.licence1.users.add(self.user)
-        self.licence1.users.add(self.owner)
+        self.licence1.assign(self.asset)
+        self.licence1.assign(self.user)
+        self.licence1.assign(self.owner)
         rows = [item for item in get_licences_rows(only_assigned=True)]
 
         self.assertEqual(

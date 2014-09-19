@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from bob.data_table import DataTableColumn
+
+from django.contrib import messages
+from django.core.urlresolvers import reverse
+from django.http import HttpResponseRedirect
+from django.utils.translation import ugettext_lazy as _
+
 from ralph_assets.forms_support import (
     AddSupportForm,
     EditSupportForm,
     SupportSearchForm,
 )
+from ralph_assets.models_assets import Asset
 from ralph_assets.models_support import Support
 from ralph_assets.views.base import AssetsBase
+from ralph_assets.licences.views import CheckBoxColumn
 from ralph_assets.views.search import GenericSearch
-from ralph_assets.views.asset import HISTORY_PAGE_SIZE, MAX_PAGE_SIZE
-from bob.data_table import DataTableColumn
-from ralph_assets.models_assets import Asset
-from django.utils.translation import ugettext_lazy as _
-from django.contrib import messages
-from django.http import HttpResponseRedirect
-from django.core.paginator import Paginator
-from django.core.urlresolvers import reverse
-from ralph_assets.views.sam import CheckBoxColumn
-from ralph_assets.models_history import SupportHistoryChange
 
 
 class SupportLinkColumn(DataTableColumn):
@@ -191,42 +195,3 @@ class DeleteSupportView(AssetsBase):
             return HttpResponseRedirect(self.back_to)
         support.delete(user=self.request.user)
         return HttpResponseRedirect(self.back_to)
-
-
-class HistorySupport(AssetsBase):
-    submodule_name = 'supports'
-    template_name = 'assets/history.html'
-
-    def get_context_data(self, **kwargs):
-        query_variable_name = 'history_page'
-        ret = super(HistorySupport, self).get_context_data(**kwargs)
-        support_id = kwargs.get('support_id')
-        support = Support.objects.get(id=support_id)
-        history = SupportHistoryChange.objects.filter(
-            support=support,
-        ).order_by('-date')
-        try:
-            page = int(self.request.GET.get(query_variable_name, 1))
-        except ValueError:
-            page = 1
-        if page == 0:
-            page = 1
-            page_size = MAX_PAGE_SIZE
-        else:
-            page_size = HISTORY_PAGE_SIZE
-        history_page = Paginator(history, page_size).page(page)
-        ret.update({
-            'history': history,
-            'history_page': history_page,
-            'show_status_button': False,
-            'query_variable_name': query_variable_name,
-            'object': support,
-            'object_url': reverse(
-                'edit_support',
-                kwargs={
-                    'support_id': support.id,
-                }
-            ),
-            'title': _('History support'),
-        })
-        return ret

@@ -29,7 +29,12 @@ from django_search_forms.fields_ajax import (
 )
 
 from ralph.ui.widgets import DateWidget
-from ralph_assets import models_sam
+from ralph_assets.licences.models import (
+    AssetOwner,
+    Licence,
+    LicenceType,
+    SoftwareCategory,
+)
 from ralph_assets.forms import (
     LOOKUPS,
     MultilineField,
@@ -38,7 +43,6 @@ from ralph_assets.forms import (
 )
 from ralph_assets.models import AssetType
 from ralph_assets.models_assets import MODE2ASSET_TYPE
-from ralph_assets.models_sam import AssetOwner, LicenceType
 
 
 class SoftwareCategoryWidget(AutoCompleteWidget):
@@ -49,10 +53,10 @@ class SoftwareCategoryWidget(AutoCompleteWidget):
             sc_name = value
         else:
             try:
-                sc_name = models_sam.SoftwareCategory.objects.get(
+                sc_name = SoftwareCategory.objects.get(
                     pk=value
                 ).name
-            except models_sam.SoftwareCategory.DoesNotExist:
+            except SoftwareCategory.DoesNotExist:
                 sc_name = ''
         return super(
             SoftwareCategoryWidget, self
@@ -67,10 +71,10 @@ class SoftwareCategoryField(AutoCompleteSelectField):
     def clean(self, value):
         value = super(SoftwareCategoryField, self).clean(value)
         try:
-            return models_sam.SoftwareCategory.objects.get(
+            return SoftwareCategory.objects.get(
                 name=value)
-        except models_sam.SoftwareCategory.DoesNotExist:
-            return models_sam.SoftwareCategory(
+        except SoftwareCategory.DoesNotExist:
+            return SoftwareCategory(
                 name=value
             )
 
@@ -167,7 +171,7 @@ class AddLicenceForm(LicenceForm, MultivalFieldForm):
     allow_duplicates = ['sn']
 
     class Meta(LicenceForm.Meta):
-        model = models_sam.Licence
+        model = Licence
         fields = (
             'accounting_id',
             'asset_type',
@@ -217,7 +221,7 @@ class EditLicenceForm(ReadOnlyFieldsMixin, LicenceForm):
     readonly_fields = ('created',)
 
     class Meta(LicenceForm.Meta):
-        model = models_sam.Licence
+        model = Licence
         fieldset = OrderedDict([
             ('Basic info', [
                 'asset_type', 'manufacturer', 'licence_type',
@@ -263,13 +267,13 @@ class EditLicenceForm(ReadOnlyFieldsMixin, LicenceForm):
 
 class SoftwareCategorySearchForm(SearchForm):
     class Meta(object):
-        Model = models_sam.SoftwareCategory
+        Model = SoftwareCategory
         fields = ['name']
 
 
 class LicenceSearchForm(SearchForm):
     class Meta(object):
-        Model = models_sam.Licence
+        Model = Licence
         fields = []
 
     niw = MultiSearchField(label=_('NIW'))
@@ -300,7 +304,7 @@ class LicenceSearchForm(SearchForm):
 class BulkEditLicenceForm(LicenceForm):
 
     class Meta(LicenceForm.Meta):
-        model = models_sam.Licence
+        model = Licence
         fields = (
             'asset_type',
             'manufacturer',

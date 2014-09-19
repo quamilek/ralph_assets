@@ -19,7 +19,7 @@ from random import randint
 from uuid import uuid1
 
 from ralph_assets.models_assets import AssetType
-from ralph_assets.models_sam import (
+from ralph_assets.licences.models import (
     Licence,
     LicenceType,
     SoftwareCategory,

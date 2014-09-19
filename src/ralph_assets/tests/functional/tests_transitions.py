@@ -204,7 +204,8 @@ class TestTransition(TestCase):
 
     def _assign_licence_to_assets(self):
         for asset in self.assets:
-            asset.licence_set.add(LicenceFactory())
+            lic = LicenceFactory()
+            lic.assign(asset)
 
     def _base_test_transition_form_assign(self, url_params, post_params):
         url_base = reverse('transition', args=('back_office',))

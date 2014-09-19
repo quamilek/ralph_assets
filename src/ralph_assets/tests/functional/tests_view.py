@@ -14,13 +14,14 @@ from urllib import urlencode
 
 from dj.choices import Country
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import resolve, reverse
 from django.test import TestCase
 from django.test.utils import override_settings
+from ralph.discovery.tests.util import DeviceFactory
 
 from ralph_assets import models_assets
 from ralph_assets import models_support
-from ralph_assets import models_sam
+from ralph_assets.licences import models as models_sam
 from ralph_assets.models_assets import Asset, SAVE_PRIORITY
 from ralph_assets.tests.utils import (
     AjaxClient,
@@ -177,6 +178,8 @@ class TestDevicesView(BaseViewsTest):
     Parent class for common stuff for Test(DataCenter|BackOffice)DeviceView.
     """
 
+    asset_factory = None
+
     def setUp(self):
         self.login_as_superuser()
         self._visible_add_form_fields = [
@@ -193,16 +196,34 @@ class TestDevicesView(BaseViewsTest):
             'licences_text', 'supports_text',
         ])
 
-    def get_asset_form_data(self):
+    def get_asset_form_data(self, factory_data=None):
         from ralph_assets import urls
-        asset = self.asset_factory()
+        if not factory_data:
+            factory_data = {}
+        asset = self.asset_factory(**factory_data)
         url = reverse('device_edit', kwargs={
             'mode': urls.normalize_asset_mode(asset.type.name),
             'asset_id': asset.id,
         })
         form_data = self.get_object_form_data(url, ['asset_form'])
+        if asset.device_info:
+            asset.device_info.delete()
+        elif asset.office_info:
+            asset.office_info.delete()
         asset.delete()
         return form_data
+
+    def add_asset_by_form(self, form_data):
+        add_asset_url = reverse(
+            'add_device',
+            kwargs={
+                'mode': models_assets.ASSET_TYPE2MODE[form_data['type']],
+            },
+        )
+        response = self.client.post(add_asset_url, form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        asset_id = resolve(response.request['PATH_INFO']).kwargs['asset_id']
+        return models_assets.Asset.objects.get(pk=asset_id)
 
     def prepare_readonly_fields(self, new_asset_data, asset, readonly_fields):
         update(new_asset_data, asset, readonly_fields)
@@ -628,6 +649,7 @@ class TestBackOfficeDevicesView(TestDevicesView, BaseViewsTest):
             'cache_version',
             'device',
             'licence',
+            'licenceasset',
             'created',
             'modified',
             'source_device',
@@ -702,7 +724,7 @@ class TestLicencesView(BaseViewsTest):
         request_data = self.license_data.copy()
         response = self.client.post(reverse('add_licence'), request_data)
         self.assertRedirects(
-            response, reverse('licence_list'), status_code=302,
+            response, reverse('licences_list'), status_code=302,
             target_status_code=200,
         )
         license = models_sam.Licence.objects.reverse()[0]
@@ -813,15 +835,16 @@ class TestLicencesView(BaseViewsTest):
         self.assertEqual(response.status_code, 302)
 
     def test_licence_count_simple(self):
+        licences_per_object = 1
         number_of_users = 5
         number_of_assets = 5
         licences = [LicenceFactory() for idx in xrange(5)]
-        licences[0].assets.add(
-            *[BOAssetFactory() for _ in xrange(number_of_assets)]
-        )
-        licences[0].users.add(
-            *[UserFactory() for _ in xrange(number_of_users)]
-        )
+        for _ in xrange(number_of_assets):
+            asset = BOAssetFactory()
+            licences[0].assign(asset, licences_per_object)
+        for _ in xrange(number_of_users):
+            user = UserFactory()
+            licences[0].assign(user, licences_per_object)
         url = reverse('count_licences')
         url += '?id={}'.format(licences[0].id)
         response = self.client.ajax_get(url)
@@ -829,8 +852,8 @@ class TestLicencesView(BaseViewsTest):
         self.assertEqual(
             json.loads(response.content),
             {
-                'used_by_users': number_of_users,
-                'used_by_assets': number_of_assets,
+                'used_by_users': number_of_users * licences_per_object,
+                'used_by_assets': number_of_assets * licences_per_object,
                 'total': licences[0].number_bought,
             },
         )
@@ -841,13 +864,13 @@ class TestLicencesView(BaseViewsTest):
             'number_bought', flat=True)
         )
         for lic in licences:
-            lic.assets.add(
-                *[BOAssetFactory() for _ in xrange(5)]
-            )
+            for _ in xrange(5):
+                asset = BOAssetFactory()
+                lic.assign(asset)
         for lic in licences:
-            lic.users.add(
-                *[UserFactory() for _ in xrange(5)]
-            )
+            for _ in xrange(5):
+                user = UserFactory()
+                lic.assign(user)
         url = reverse('count_licences')
         response = self.client.ajax_get(url)
         self.assertEqual(response.status_code, 200)
@@ -1464,7 +1487,7 @@ class TestColumnsInSearch(BaseViewsTest):
             'Property of', 'Software Category', 'Type', 'Used', 'Valid thru',
             'Created',
         ])
-        search_url = reverse('licence_list')
+        search_url = reverse('licences_list')
         self.check_cols_presence(search_url, correct_col_names, mode=None)
 
     def test_supports_cols_presence(self):
@@ -1566,3 +1589,51 @@ class TestSyncFieldMixin(TestDevicesView):
         self.assertEqual(device.service, asset.service)
         self.assertNotEqual(asset.device_environment, None)
         self.assertEqual(device.device_environment, asset.device_environment)
+
+
+class TestAssetAndDeviceLinkage(TestDevicesView, BaseViewsTest):
+
+    asset_factory = DCAssetFactory
+
+    def _check_fields(self, obj, correct_data):
+        for field, correct_value in correct_data.iteritems():
+            self.assertEqual(getattr(obj, field), correct_value)
+
+    def test_asset_clones_fields_to_new_device(self):
+        """
+        - add asset without ralph_device_id
+        - check each field (dc, device_environment, name, remarks, service)
+        is copied to device from asset
+        """
+        # set device_info=None to prevent creation of device
+        form_data = self.get_asset_form_data({'device_info': None})
+        form_data['ralph_device_id'] = ''
+        asset = self.add_asset_by_form(form_data)
+        correct_value = {
+            'dc': asset.warehouse.name,
+            'device_environment': asset.device_environment,
+            'name': asset.model.name,
+            'remarks': asset.order_no,
+            'service': asset.service,
+        }
+        device = Device.objects.get(sn=asset.sn)
+        self._check_fields(device, correct_value)
+
+    def test_asset_spares_existing_device_fields(self):
+        """
+        - create ralph-core device *core_device*
+        - add asset with ralph_device_id = core_device.id
+        - check each field (name, remark, dc) is unchanged
+        """
+        old_value = {
+            'dc': 'device dc',
+            'name': 'device name',
+            'remarks': 'device remarks',
+        }
+        device = DeviceFactory(**old_value)
+        self._check_fields(device, old_value)
+        form_data = self.get_asset_form_data()
+        form_data['ralph_device_id'] = device.id
+        self.add_asset_by_form(form_data)
+        device = Device.objects.get(pk=device.id)
+        self._check_fields(device, old_value)

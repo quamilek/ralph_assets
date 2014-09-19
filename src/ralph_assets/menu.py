@@ -25,18 +25,11 @@ class AssetMenu(Menu):
     def get_submodules(self):
         return [
             MenuItem(
-                fugue_icon='fugue-building',
+                fugue_icon='fugue-computer',
                 view_name='asset_search',
                 view_kwargs={'mode': 'dc'},
-                label=_('Data center'),
-                name='search_dc',
-            ),
-            MenuItem(
-                fugue_icon='fugue-printer',
-                view_name='asset_search',
-                view_kwargs={'mode': 'back_office'},
-                label=_('BackOffice'),
-                name='search_back_office',
+                label=_('Hardware'),
+                name='hardware',
             ),
             MenuItem(
                 fugue_icon='fugue-lifebuoy',
@@ -46,8 +39,8 @@ class AssetMenu(Menu):
             ),
             MenuItem(
                 fugue_icon='fugue-cheque',
-                href=reverse('licence_list'),
-                view_name='licence_list',
+                href=reverse('licences_list'),
+                view_name='licences_list',
                 label=_('Licences'),
                 name='licences',
             ),
@@ -72,7 +65,7 @@ class AssetMenu(Menu):
         ]
 
     def get_sidebar_items(self):
-        search_dc = [
+        hardware = [
             {
                 'label': _('Search'),
                 'view_name': 'asset_search',
@@ -92,7 +85,7 @@ class AssetMenu(Menu):
                 'fugue_icon': 'fugue-block--plus',
             },
         ]
-        search_bo = [
+        hardware_bo = [
             {
                 'label': _('Search'),
                 'view_name': 'asset_search',
@@ -127,7 +120,7 @@ class AssetMenu(Menu):
         licences = [
             {
                 'label': _('Search'),
-                'view_name': 'licence_list',
+                'view_name': 'licences_list',
                 'fugue_icon': 'fugue-magnifier',
             },
             {
@@ -147,8 +140,8 @@ class AssetMenu(Menu):
             for report in ReportViewBase.reports
         ]
         return {
-            'search_dc': self.generate_menu_items(search_dc),
-            'search_back_office': self.generate_menu_items(search_bo),
+            'hardware_dc': self.generate_menu_items(hardware),
+            'hardware_back_office': self.generate_menu_items(hardware_bo),
             'supports': self.generate_menu_items(supports),
             'licences': self.generate_menu_items(licences),
             'assets_reports': self.generate_menu_items(reports),

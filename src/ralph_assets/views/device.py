@@ -25,8 +25,8 @@ from ralph_assets.forms import (
     SplitDevice,
 )
 from ralph_assets.models import Asset, AssetModel, PartInfo
-from ralph_assets.models_history import AssetHistoryChange
 from ralph_assets.models_assets import AssetType
+from ralph_assets.licences.models import Licence
 from ralph_assets.views.base import AssetsBase, SubmoduleModeMixin
 from ralph_assets.views.utils import (
     _create_device,
@@ -114,6 +114,7 @@ class AddDevice(SubmoduleModeMixin, AssetsBase):
                     self.additional_info.cleaned_data,
                     self.mode,
                 )
+                device.save()
                 ids.append(device.id)
             messages.success(self.request, _("Assets saved."))
             cat = self.request.path.split('/')[2]
@@ -153,19 +154,14 @@ class EditDevice(SubmoduleModeMixin, AssetsBase):
 
     def get_context_data(self, **kwargs):
         ret = super(EditDevice, self).get_context_data(**kwargs)
-        status_history = AssetHistoryChange.objects.all().filter(
-            asset=kwargs.get('asset_id'), field_name__exact='status'
-        ).order_by('-date')
         ret.update({
             'asset_form': self.asset_form,
             'additional_info': self.additional_info,
             'part_form': self.part_form,
             'form_id': 'edit_device_asset_form',
             'edit_mode': True,
-            'status_history': status_history,
             'parts': self.parts,
             'asset': self.asset,
-            'history_link': self.get_history_link(),
         })
         return ret
 
@@ -271,7 +267,7 @@ class EditDevice(SubmoduleModeMixin, AssetsBase):
                 for licence in self.asset_form.cleaned_data.get(
                     'licences', []
                 ):
-                    self.asset.licence_set.add(licence)
+                    Licence.objects.get(id=licence).assign(self.asset)
                 self.asset.supports.clear()
                 for support in self.asset_form.cleaned_data.get(
                     'supports', []
@@ -288,14 +284,6 @@ class EditDevice(SubmoduleModeMixin, AssetsBase):
                     self.request, self.asset_form.non_field_errors(),
                 )
         return super(EditDevice, self).get(*args, **kwargs)
-
-    def get_history_link(self):
-        asset_id = self.asset.id
-        url = reverse('device_history', kwargs={
-            'asset_id': asset_id,
-            'mode': self.mode,
-        })
-        return url
 
 
 class SplitDeviceView(SubmoduleModeMixin, AssetsBase):

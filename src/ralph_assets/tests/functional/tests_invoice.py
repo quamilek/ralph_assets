@@ -67,7 +67,7 @@ class TestInvoiceReport(TestCase):
         return reverse('assets_invoice_report', args=('back_office',))
 
     def _get_invoice_licence_base_url(self):
-        return reverse('sam_invoice_report')
+        return reverse('licences_invoice_report')
 
     def _get_invoice_url_from_asset(self, assets):
         assets_ids = assets.values_list('id', flat=True)
