@@ -648,10 +648,52 @@ class Asset(
         obj = self.get_ralph_device()
         return [(obj, fields)] if obj else []
 
-    def save(self, commit=True, sync=True, *args, **kwargs):
+    @property
+    def exists(self):
+        """Check if object is a new db record"""
+        return self.pk is None
+
+    def handle_device_linkage(self, force_unlink):
+        """When try to match it with an existing device or create a dummy
+        (stock) device and then match with it instead.
+        Note: it does not apply to assets created with 'add part' button.
+
+        Cases:
+        when adding asset:
+            no barcode -> add asset + create dummy device
+            set barcode from unlinked device -> add asset + link device
+            set barcode from linked device -> error
+            set barcode from linked device + force unlink -> add + relink
+
+        when editing asset:
+            do nothing
+        """
+        try:
+            ralph_device_id = self.device_info.ralph_device_id
+        except AttributeError:
+            # asset created with 'add part'
+            pass
+        else:
+            if self.exists:
+                if not ralph_device_id:
+                    device = self.find_device_to_link()
+                    if device:
+                        if force_unlink:
+                            asset = device.get_asset()
+                            asset.device_info.ralph_device_id = None
+                            asset.device_info.save()
+                        self.device_info.ralph_device_id = device.id
+                        self.device_info.save()
+                    else:
+                        self.create_stock_device()
+
+    def save(
+        self, commit=True, sync=True, force_unlink=False, *args, **kwargs
+    ):
         _replace_empty_with_none(self, ['source', 'hostname'])
         if sync:
             SyncFieldMixin.save(self, *args, **kwargs)
+        self.handle_device_linkage(force_unlink)
         instance = super(Asset, self).save(commit=commit, *args, **kwargs)
         return instance
 
@@ -663,8 +705,21 @@ class Asset(
         else:
             raise UserWarning('Unknown asset data type!')
 
+    @property
+    def type_is_data_center(self):
+        return self.type == AssetType.data_center
+
+    def find_device_to_link(self):
+        if not self.type_is_data_center or not self.barcode:
+            return False
+        try:
+            device = Device.objects.get(barcode=self.barcode)
+        except Device.DoesNotExist:
+            device = False
+        return device
+
     def create_stock_device(self):
-        if not self.type == AssetType.data_center:
+        if not self.type_is_data_center:
             return
         if not self.device_info.ralph_device_id:
             try:
@@ -780,24 +835,6 @@ class Asset(
     @property
     def asset_type(self):
         return self.type
-
-
-@receiver(post_save, sender=Asset, dispatch_uid='ralph.create_asset')
-def create_asset_post_save(sender, instance, created, **kwargs):
-    """When a new DC asset without a device linked to it is created, try to
-    match it with an existing device or create a dummy (stock) device and
-    match with it instead. Note: it does not apply to assets created with
-    'add part' button.
-    """
-    if created:
-        try:
-            ralph_device_id = instance.device_info.ralph_device_id
-        except AttributeError:
-            # asset created with 'add part'
-            pass
-        else:
-            if not ralph_device_id:
-                instance.create_stock_device()
 
 
 class DeviceInfo(TimeTrackable, SavingUser, SoftDeletable):

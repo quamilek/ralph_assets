@@ -29,7 +29,7 @@ from ralph_assets.models_assets import AssetType
 from ralph_assets.licences.models import Licence
 from ralph_assets.views.base import AssetsBase, SubmoduleModeMixin
 from ralph_assets.views.utils import (
-    _create_device,
+    _create_assets,
     _move_data,
     _update_office_info,
     _update_asset,
@@ -87,35 +87,28 @@ class AddDevice(SubmoduleModeMixin, AssetsBase):
         self.asset_form = device_form_class(self.request.POST, mode=self.mode)
         self._set_additional_info_form()
         if self.asset_form.is_valid() and self.additional_info.is_valid():
-            creator_profile = self.request.user.get_profile()
-            asset_data = {}
-            for f_name, f_value in self.asset_form.cleaned_data.items():
-                if f_name not in {
-                    "barcode", "category", "company", "cost_center",
-                    "department", "employee_id", "imei", "licences", "manager",
-                    "sn", "profit_center", "supports",
-                }:
-                    asset_data[f_name] = f_value
-            sns = self.asset_form.cleaned_data.get('sn', [])
-            barcodes = self.asset_form.cleaned_data.get('barcode', [])
-            imeis = (
-                self.asset_form.cleaned_data.pop('imei')
-                if 'imei' in self.asset_form.cleaned_data else None
+            force_unlink = self.additional_info.cleaned_data.get(
+                'force_unlink', None,
             )
-            ids = []
-            for index in range(len(sns or barcodes)):
-                asset_data['sn'] = sns[index] if sns else None
-                asset_data['barcode'] = barcodes[index] if barcodes else None
-                if imeis:
-                    self.additional_info.cleaned_data['imei'] = imeis[index]
-                device = _create_device(
-                    creator_profile,
-                    asset_data,
-                    self.additional_info.cleaned_data,
-                    self.mode,
+            if self.validate_barcodes(
+                self.asset_form.cleaned_data['barcode'],
+            ) and not force_unlink:
+                msg = _(
+                    "Device with barcode already exist, check"
+                    " 'force unlink' option to relink it."
                 )
-                device.save()
-                ids.append(device.id)
+                messages.error(self.request, msg)
+                return super(AddDevice, self).get(*args, **kwargs)
+            try:
+                ids = _create_assets(
+                    self.request.user.get_profile(),
+                    self.asset_form,
+                    self.additional_info,
+                    self.mode
+                )
+            except ValueError as e:
+                messages.error(self.request, e.message)
+                return super(AddDevice, self).get(*args, **kwargs)
             messages.success(self.request, _("Assets saved."))
             cat = self.request.path.split('/')[2]
             if len(ids) == 1:
@@ -257,12 +250,26 @@ class EditDevice(SubmoduleModeMixin, AssetsBase):
                 self.asset_form.is_valid(),
                 self.additional_info.is_valid(),
             )):
+                force_unlink = self.additional_info.cleaned_data.get(
+                    'force_unlink', None,
+                )
+                if self.validate_barcodes(
+                    [self.asset_form.cleaned_data['barcode']]
+                ) and not force_unlink:
+                    msg = _(
+                        "Device with barcode already exist, check"
+                        " 'force unlink' option to relink it."
+                    )
+                    messages.error(self.request, msg)
+                    return super(EditDevice, self).get(*args, **kwargs)
                 modifier_profile = self.request.user.get_profile()
                 self.asset = _update_asset(
                     modifier_profile, self.asset, self.asset_form.cleaned_data
                 )
                 self._update_additional_info(modifier_profile.user)
-                self.asset.save(user=self.request.user)
+                self.asset.save(
+                    user=self.request.user, force_unlink=force_unlink,
+                )
                 self.asset.licence_set.clear()
                 for licence in self.asset_form.cleaned_data.get(
                     'licences', []

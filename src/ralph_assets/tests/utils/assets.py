@@ -50,6 +50,14 @@ category_code_set = 'ABCDEFGHIJKLMNOPRSTUVWXYZ1234567890'
 category_code_combinations = itertools.product(category_code_set, repeat=2)
 
 
+def generate_sn():
+    return str(uuid1())
+
+
+def generate_barcode():
+    return str(uuid1())
+
+
 def generate_imei(n):
     """Random IMEI generator. This function return random but not unique
     IMEI number. Based on code from http://stackoverflow.com/a/20733310
@@ -181,7 +189,7 @@ class AssetFactory(DjangoModelFactory):
 
     @lazy_attribute
     def sn(self):
-        return str(uuid1())
+        return generate_sn()
 
 
 class BaseAssetFactory(DjangoModelFactory):
@@ -220,11 +228,11 @@ class BaseAssetFactory(DjangoModelFactory):
 
     @lazy_attribute
     def barcode(self):
-        return str(uuid1())
+        return generate_barcode()
 
     @lazy_attribute
     def sn(self):
-        return str(uuid1())
+        return generate_sn()
 
     @factory.post_generation
     def supports(self, create, extracted, **kwargs):

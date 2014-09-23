@@ -20,6 +20,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.translation import ugettext_lazy as _
 from django.views.generic import TemplateView
 
+from ralph.discovery.models_device import Device
 from ralph.ui.views.common import MenuMixin
 from ralph.account.models import Perm, ralph_permission
 from ralph_assets import forms as assets_forms
@@ -92,6 +93,19 @@ class AssetsBase(ACLGateway, MenuMixin, TemplateView):
 
     def set_mode(self, mode):
         self.mode = mode
+
+    def validate_barcodes(self, barcodes):
+        """
+        Checks if barcodes used in asset form are already linked to any assets.
+        """
+        if barcodes:
+            found = Device.objects.filter(barcode__in=barcodes).all()
+            found = Asset.objects.filter(
+                device_info__ralph_device_id__in=found,
+            ).all()
+        else:
+            found = []
+        return found
 
     def write_office_info2asset_form(self):
         """

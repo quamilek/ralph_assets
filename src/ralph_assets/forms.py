@@ -1230,8 +1230,8 @@ class BackOfficeAddDeviceForm(AddDeviceForm):
     def __init__(self, *args, **kwargs):
         super(BackOfficeAddDeviceForm, self).__init__(*args, **kwargs)
         for after, field in (
-            ('property_of', 'device_environment'),
-            ('device_environment', 'service'),
+            ('property_of', 'service'),
+            ('service', 'device_environment'),
         ):
             self.fieldsets['Basic Info'].append(field)
             move_after(self.fieldsets['Basic Info'], after, field)
@@ -1258,8 +1258,8 @@ class DataCenterAddDeviceForm(AddDeviceForm):
         super(DataCenterAddDeviceForm, self).__init__(*args, **kwargs)
         for after, field in (
             ('status', 'slots'),
-            ('property_of', 'device_environment'),
-            ('device_environment', 'service'),
+            ('property_of', 'service'),
+            ('service', 'device_environment'),
         ):
             self.fieldsets['Basic Info'].append(field)
             move_after(self.fieldsets['Basic Info'], after, field)
@@ -1350,8 +1350,8 @@ class BackOfficeEditDeviceForm(ReadOnlyFieldsMixin, EditDeviceForm):
             ('sn', 'imei'),
             ('loan_end_date', 'purpose'),
             ('property_of', 'hostname'),
-            ('hostname', 'device_environment'),
-            ('device_environment', 'service'),
+            ('hostname', 'service'),
+            ('service', 'device_environment'),
             ('hostname', 'created'),
         ):
             self.fieldsets['Basic Info'].append(field)
@@ -1383,8 +1383,8 @@ class DataCenterEditDeviceForm(EditDeviceForm):
         super(DataCenterEditDeviceForm, self).__init__(*args, **kwargs)
         for after, field in (
             ('status', 'slots'),
-            ('property_of', 'device_environment'),
-            ('device_environment', 'service'),
+            ('property_of', 'service'),
+            ('service', 'device_environment'),
         ):
             self.fieldsets['Basic Info'].append(field)
             move_after(self.fieldsets['Basic Info'], after, field)
@@ -1598,14 +1598,14 @@ class SearchAssetForm(Form):
         choices=[('', '----'), ('any', 'any'), ('none', 'none')],
         label=_('Assigned supports'),
     )
-    device_environment = AutoCompleteField(
-        LOOKUPS['device_environment'],
-        label=_('Environment'),
-        required=False,
-    )
     service = AutoCompleteField(
         LOOKUPS['service'],
         label=_('Service catalog'),
+        required=False,
+    )
+    device_environment = AutoCompleteField(
+        LOOKUPS['device_environment'],
+        label=_('Environment'),
         required=False,
     )
 
