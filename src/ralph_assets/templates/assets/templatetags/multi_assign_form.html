@@ -1,11 +1,10 @@
 {% load assets %}
 <tr>
-  <td style="vertical-align:middle" class="ordinal" data-no="{{ counter }}">
-    {{ counter }}
-  {% for field in form.hidden_fields %}{{ field }}{% endfor %}
-          {{ form.id }}
+  <td style="vertical-align:middle" data-no="{{ counter }}">
+    <span class="ordinal">{{ counter }}</span>
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
   </td>
-  {% for field in form %}
+  {% for field in form.visible_fields %}
     <td class="control-group{% if "-support_period" in field.html_name %} small{% endif %}{% if field.errors %} error{% endif %}" style="vertical-align:middle">
       {% if field|is_checkbox %}
         <a href="#" class="btn-small btn-danger delete_row">{{ field }}-</a>

@@ -2,7 +2,6 @@ $(document).ready(function () {
     var FORM_COUNT = parseInt($('input[name="form-TOTAL_FORMS"]').val());
 
     $('.add_row').on("click", function () {
-        var row = $('.form-split tbody tr').last().clone(true, true);
         var row_html = $('#row-to-copy').html();
         $('.form-split tbody').append(row_html)
         change_form_counter('add');
@@ -20,10 +19,6 @@ $(document).ready(function () {
         change_form_counter('subtract');
         renumber_forms();
         return false;
-    });
-
-    $(".input, .uneditable-input").on("click", function () {
-        $(this).parent().next("td").find('input').val($(this).html());
     });
 
     function change_form_counter(action) {

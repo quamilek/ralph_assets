@@ -83,7 +83,7 @@ def assigned_formset_factory(obj, base_model, field, lookup,
         def __init__(self, *args, **kwargs):
             super(Form, self).__init__(*args, **kwargs)
             self.fields[field] = AutoCompleteSelectField(lookup, required=True)
-            self.fields[obj.__class__.__name__.lower()].widget = forms.HiddenInput()
+            self.fields[obj.__class__.__name__.lower()] = forms.IntegerField(widget=forms.HiddenInput(), initial=obj.id)  # noqa
             self.fields['delete'] = forms.BooleanField(
                 required=False,
                 widget=forms.CheckboxInput(),
@@ -102,6 +102,12 @@ def assigned_formset_factory(obj, base_model, field, lookup,
         class Meta:
             model = base_model
             exclude = extra_exclude or []
+
+        def clean(self):
+            data_cleaned = super(Form, self).clean()
+            data_cleaned['licence'] = obj
+            return data_cleaned
+            # import ipdb; ipdb.set_trace()
 
     formset = modelformset_factory(
         model=base_model,

@@ -20,7 +20,6 @@ from django.utils.translation import ugettext_lazy as _
 
 from ralph_assets.forms_multi import (
     AssetLicenceAssignForm,
-    UserLicenceAssignForm,
 )
 from ralph_assets.licences.forms import (
     SoftwareCategorySearchForm,
@@ -329,20 +328,20 @@ class LicenceConnectionsView(SubmoduleModeMixin, AssetsBase):
         AssetFormsetFactory = formset_factory(
             form=AssetLicenceAssignForm, extra=2,
         )
+        # assets = self.licence.assets.all()
         asset_connections_formset = AssetFormsetFactory(
             initial={}, prefix='assets',
         )
-        UserFormsetFactory = formset_factory(
-            form=UserLicenceAssignForm, extra=2,
-        )
-        user_connections_formset = UserFormsetFactory(
-            initial={}, prefix='users',
-        )
-
+        # UserFormsetFactory = formset_factory(
+        #     form=UserLicenceAssignForm, extra=2,
+        # )
+        # user_connections_formset = UserFormsetFactory(
+        #     initial={}, prefix='users',
+        # )
         return {
             'empty_formset': empty_formset,
-            'asset_connections_formset': asset_connections_formset,
-            'user_connections_formset': user_connections_formset,
+            'asset_connections_formset': asset_connections_formset(),
+            # 'user_connections_formset': user_connections_formset,
         }
 
     def get_context_data(self, *args, **kwargs):
@@ -395,7 +394,7 @@ class AssginLicenceMixin(object):
             base_model=self.get_base_model(),
             field=self.get_base_field(),
             lookup=self.lookup,
-            extra=0
+            extra=1
         )(request.POST or None, queryset=queryset)
         return super(AssginLicenceMixin, self).dispatch(
             request, *args, **kwargs
