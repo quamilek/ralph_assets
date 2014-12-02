@@ -64,6 +64,7 @@ class AssetsSearchQueryableMixin(object):
             'profit_center',
             'provider',
             'purpose',
+            'location_name',
             'ralph_device_id',
             'remarks',
             'required_support',
@@ -77,6 +78,7 @@ class AssetsSearchQueryableMixin(object):
             'unlinked',
             'user',
             'warehouse',
+            'without_assigned_location',
             'region'
         ]
         # handle simple 'equals' search fields at once.
@@ -264,8 +266,39 @@ class AssetsSearchQueryableMixin(object):
                         all_q &= Q(
                             device_environment__name__icontains=field_value,
                         )
+                elif field == 'without_assigned_location':
+                    empty_location = (
+                        Q(device_info__data_center=None) |
+                        Q(device_info__server_room=None) |
+                        Q(device_info__rack=None) |
+                        Q(device_info__position=None) |
+                        Q(device_info__orientation=None)
+                    )
+                    asset_without_category_and_location = (
+                        Q(model__category=None) & Q(empty_location)
+                    )
+                    blade_asset_with_empty_location = (
+                        Q(model__category__is_blade=True) &
+                        Q(empty_location | Q(device_info__slot_no=None))
+                    )
+                    not_blade_asset_with_empty_location = (
+                        Q(model__category__is_blade=False) & Q(empty_location)
+                    )
+                    all_q &= (
+                        asset_without_category_and_location |
+                        blade_asset_with_empty_location |
+                        not_blade_asset_with_empty_location
+                    )
                 elif field == 'region':
                     all_q &= Q(region__id=field_value)
+                elif field == 'location_name':
+                    all_q &= (
+                        Q(device_info__rack__name=field_value) |
+                        Q(device_info__data_center__name=field_value) |
+                        Q(device_info__server_room__name=field_value) |
+                        Q(device_info__rack__server_room__name=field_value) |
+                        Q(device_info__rack__data_center__name=field_value)
+                    )
                 else:
                     q = Q(**{field: field_value})
                     all_q = all_q & q
@@ -627,7 +660,8 @@ class AssetSearchDataTable(_AssetSearch, DataTableMixin):
                     field='ralph_device_id',
                     foreign_field_name='device_info',
                     export=True,
-                ), _(
+                ),
+                _(
                     'Rack',
                     field='rack_old',
                     foreign_field_name='device_info',
