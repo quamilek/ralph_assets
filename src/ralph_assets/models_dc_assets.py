@@ -97,10 +97,24 @@ class DataCenter(Named):
     deprecated_ralph_dc = models.ForeignKey(
         DeprecatedRalphDC, null=True, blank=True,
     )
+    visualization_cols_num = models.PositiveIntegerField(
+        verbose_name=_('visualization grid columns number'),
+        default=20,
+    )
+    visualization_rows_num = models.PositiveIntegerField(
+        verbose_name=_('visualization grid rows number'),
+        default=20,
+    )
+
+    def __unicode__(self):
+        return self.name
 
 
 class ServerRoom(Named.NonUnique):
     data_center = models.ForeignKey(DataCenter, verbose_name=_("data center"))
+
+    def __unicode__(self):
+        return '{} ({})'.format(self.name, self.data_center.name)
 
 
 class Rack(Named.NonUnique):
@@ -118,6 +132,20 @@ class Rack(Named.NonUnique):
         DeprecatedRalphRack, null=True, related_name='deprecated_asset_rack',
         blank=True,
     )
+    visualization_col = models.PositiveIntegerField(
+        verbose_name=_('column number on visualization grid'),
+    )
+    visualization_row = models.PositiveIntegerField(
+        verbose_name=_('row number on visualization grid'),
+    )
+
+    def __unicode__(self):
+        name = self.name
+        if self.server_room:
+            name = '{} - {}'.format(name, self.server_room)
+        elif self.data_center:
+            name = '{} - {}'.format(name, self.data_center)
+        return name
 
 
 class AccessoryType(Choices):
