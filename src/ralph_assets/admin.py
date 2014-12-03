@@ -350,7 +350,7 @@ class RackForm(forms.ModelForm):
         )
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
-        collided_racks = qs.values_list('name', flat=True)
+        collided_racks = qs.values_list('name', flat=True)  # noqa
         # if collided_racks:
         #     raise forms.ValidationError(
         #         ''_('Selected possition collidate with racks: '))

@@ -9,6 +9,7 @@ from django.conf.urls import patterns, url
 
 from ralph_assets.rest import (
     AssetInfoPerRackAPIView,
+    DCRacksAPIView,
 )
 
 
@@ -17,5 +18,9 @@ urlpatterns = patterns(
     url(
         r'^rack/(?P<rack_id>\d+)/devices/$',
         AssetInfoPerRackAPIView.as_view(),
+    ),
+    url(
+        r'^data_center/(?P<data_center_id>\d+)/$',
+        DCRacksAPIView.as_view(),
     ),
 )
