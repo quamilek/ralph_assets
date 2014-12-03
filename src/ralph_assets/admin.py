@@ -311,8 +311,16 @@ admin.site.register(Licence, LicenceAdmin)
 
 class DataCenterAdmin(ModelAdmin):
     save_on_top = True
-    list_display = ('name',)
+    list_display = ('name', 'visualization_cols_num', 'visualization_rows_num')
     search_fields = ('name',)
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'deprecated_ralph_dc'),
+        }),
+        (_('Visualization'), {
+            'fields': ('visualization_cols_num', 'visualization_rows_num'),
+        }),
+    )
 
 
 admin.site.register(models_assets.DataCenter, DataCenterAdmin)
@@ -327,10 +335,45 @@ class ServerRoomAdmin(ModelAdmin):
 admin.site.register(models_assets.ServerRoom, ServerRoomAdmin)
 
 
+class RackForm(forms.ModelForm):
+
+    class Meta:
+        model = models_assets.Rack
+
+    def clean(self):
+        cleaned_data = super(RackForm, self).clean()
+        # Check collisions.
+        qs = models_assets.Rack.objects.filter(
+            data_center=cleaned_data['data_center'],
+            visualization_col=cleaned_data['visualization_col'],
+            visualization_row=cleaned_data['visualization_row'],
+        )
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        collided_racks = qs.values_list('name', flat=True)
+        # if collided_racks:
+        #     raise forms.ValidationError(
+        #         ''_('Selected possition collidate with racks: '))
+        # Check dimensions.
+        return cleaned_data
+
+
 class RackAdmin(ModelAdmin):
+    form = RackForm
     save_on_top = True
-    list_display = ('name', 'data_center', 'max_u_height', 'server_room',)
-    search_fields = ('name', 'data_center', 'max_u_height', 'server_room',)
+    list_display = ('name', 'data_center', 'server_room', 'max_u_height',)
+    search_fields = ('name', 'data_center', 'server_room', 'max_u_height',)
+    fieldsets = (
+        (None, {
+            'fields': (
+                'name', 'data_center', 'server_room', 'max_u_height',
+                'deprecated_ralph_rack',
+            ),
+        }),
+        (_('Visualization'), {
+            'fields': ('visualization_col', 'visualization_row'),
+        }),
+    )
 
 
 admin.site.register(models_assets.Rack, RackAdmin)
