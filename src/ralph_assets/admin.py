@@ -33,6 +33,7 @@ from ralph_assets.models import (
     Warehouse,
 )
 from ralph_assets.models_assets import REPORT_LANGUAGES
+from ralph_assets.models_dc_assets import Accessory
 from ralph_assets.models_util import ImportProblem
 from ralph_assets.licences.models import LicenceType, SoftwareCategory
 from ralph_assets.models_support import Support, SupportType
@@ -309,10 +310,42 @@ class LicenceAdmin(ModelAdmin):
 admin.site.register(Licence, LicenceAdmin)
 
 
+def _greater_than_zero_validation(value):
+    if value <= 0:
+        raise forms.ValidationError(_(
+            'Please specify value greater than zero.',
+        ))
+
+
+class DataCenterForm(forms.ModelForm):
+
+    class Meta:
+        model = models_assets.DataCenter
+
+    def clean_visualization_cols_num(self):
+        data = self.cleaned_data['visualization_cols_num']
+        _greater_than_zero_validation(data)
+        return data
+
+    def clean_visualization_rows_num(self):
+        data = self.cleaned_data['visualization_rows_num']
+        _greater_than_zero_validation(data)
+        return data
+
+
 class DataCenterAdmin(ModelAdmin):
+    form = DataCenterForm
     save_on_top = True
-    list_display = ('name',)
+    list_display = ('name', 'visualization_cols_num', 'visualization_rows_num')
     search_fields = ('name',)
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'deprecated_ralph_dc'),
+        }),
+        (_('Visualization'), {
+            'fields': ('visualization_cols_num', 'visualization_rows_num'),
+        }),
+    )
 
 
 admin.site.register(models_assets.DataCenter, DataCenterAdmin)
@@ -327,10 +360,98 @@ class ServerRoomAdmin(ModelAdmin):
 admin.site.register(models_assets.ServerRoom, ServerRoomAdmin)
 
 
+class RackForm(forms.ModelForm):
+
+    class Meta:
+        model = models_assets.Rack
+
+    def clean_visualization_col(self):
+        data = self.cleaned_data['visualization_col']
+        _greater_than_zero_validation(data)
+        return data
+
+    def clean_visualization_row(self):
+        data = self.cleaned_data['visualization_row']
+        _greater_than_zero_validation(data)
+        return data
+
+    def clean(self):
+        cleaned_data = super(RackForm, self).clean()
+        data_center = cleaned_data.get('data_center')
+        visualization_col = cleaned_data.get('visualization_col')
+        visualization_row = cleaned_data.get('visualization_row')
+        if not data_center or not visualization_col or not visualization_row:
+            return cleaned_data
+        # Check collisions.
+        qs = models_assets.Rack.objects.filter(
+            data_center=data_center,
+            visualization_col=visualization_col,
+            visualization_row=visualization_row,
+        )
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        collided_racks = qs.values_list('name', flat=True)
+        if collided_racks:
+            raise forms.ValidationError(
+                _('Selected possition collides with racks: %(racks)s.') % {
+                    'racks': ' ,'.join(collided_racks),
+                },
+            )
+        # Check dimensions.
+        if data_center.visualization_cols_num < visualization_col:
+            raise forms.ValidationError(
+                _(
+                    'Maximum allowed column number for selected data center '
+                    'is %(cols_num)d.'
+                ) % {
+                    'cols_num': data_center.visualization_cols_num,
+                },
+            )
+        if data_center.visualization_rows_num < visualization_row:
+            raise forms.ValidationError(
+                _(
+                    'Maximum allowed row number for selected data center '
+                    'is %(rows_num)d.'
+                ) % {
+                    'rows_num': data_center.visualization_rows_num,
+                },
+            )
+        return cleaned_data
+
+
+class AccessoryInline(admin.TabularInline):
+    fields = ('accessory', 'position', 'remarks', 'orientation')
+    model = models_assets.Rack.accessories.through
+    extra = 1
+
+
 class RackAdmin(ModelAdmin):
+    form = RackForm
     save_on_top = True
-    list_display = ('name', 'data_center', 'max_u_height', 'server_room',)
-    search_fields = ('name', 'data_center', 'max_u_height', 'server_room',)
+    list_display = ('name', 'data_center', 'server_room', 'max_u_height',)
+    search_fields = ('name', 'data_center', 'server_room', 'max_u_height',)
+    fieldsets = (
+        (None, {
+            'fields': (
+                'name', 'data_center', 'server_room', 'max_u_height',
+                'deprecated_ralph_rack',
+            ),
+        }),
+        (_('Visualization'), {
+            'fields': ('visualization_col', 'visualization_row'),
+        }),
+    )
+    inlines = [
+        AccessoryInline,
+    ]
 
 
 admin.site.register(models_assets.Rack, RackAdmin)
+
+
+class AccessoryAdmin(ModelAdmin):
+    save_on_top = True
+    list_display = ('name',)
+    search_fields = ('name',)
+
+admin.site.register(Accessory, AccessoryAdmin)

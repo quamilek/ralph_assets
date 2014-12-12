@@ -23,6 +23,7 @@ from ralph_assets.tests.utils.assets import (
     BOAssetFactory,
     DCAssetFactory,
     AssetManufacturerFactory,
+    RackFactory,
 )
 from ralph_assets.models_assets import (
     Asset,
@@ -31,6 +32,21 @@ from ralph_assets.models_assets import (
 )
 from ralph.ui.tests.global_utils import login_as_su
 from ralph_assets.tests.utils import supports
+
+
+class BaseSearchTest(TestCase):
+    def setUp(self):
+        self.client = login_as_su()
+        self.testing_urls = {
+            'dc': reverse('asset_search', args=('dc',)),
+            'bo': reverse('asset_search', args=('back_office',)),
+        }
+
+    def _query_results(self, url, data_dict):
+        fields_query = urllib.urlencode(data_dict)
+        url = '{}?{}'.format(url, fields_query)
+        response = self.client.get(url)
+        return response.context['bob_page'].paginator.object_list
 
 
 class TestSearchForm(TestCase):
@@ -572,30 +588,48 @@ class TestSearchProductionUseDateFields(TestCase):
 
 class TestSearchEngine(TestCase):
     """General tests for search engine."""
+    msg_error = 'Error in {}, request has return {} but expected {}.'
+
     def setUp(self):
         self.client = login_as_su()
         self.testing_urls = {
             'dc': reverse('asset_search', args=('dc',)),
             'bo': reverse('asset_search', args=('back_office',)),
         }
-        self.assets_dc = [AssetFactory() for _ in range(5)]
-        self.assets_bo = [BOAssetFactory() for _ in range(5)]
+
+    @classmethod
+    def tearDownClass(cls):
+        from django.core.management import call_command
+        call_command('flush', interactive=False, verbosity=0)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.assets_dc = [DCAssetFactory() for _ in range(5)]
+        cls.assets_bo = [BOAssetFactory() for _ in range(5)]
         for name in ['iPad 5 16 GB', 'ProLiant BL2x2d', 'WS-CBS312']:
-            AssetFactory(model__name=name)
+            DCAssetFactory(model__name=name)
             BOAssetFactory(model__name=name)
 
+        rack = RackFactory(name='707', server_room__name='Server Room 404')
         for manufacturer in ['Apple', 'Sony', 'Nikon', 'Sony Ericsson']:
             manu = AssetManufacturerFactory(name=manufacturer)
-            AssetFactory(model__manufacturer=manu)
+            DCAssetFactory(
+                model__manufacturer=manu,
+                device_info__rack=rack,
+            )
             BOAssetFactory(model__manufacturer=manu)
             licences.LicenceFactory(manufacturer=manu)
 
         for unique in ['123456', '456123']:
-            AssetFactory(barcode=unique, sn=unique, niw=unique)
+            DCAssetFactory(
+                barcode=unique,
+                sn=unique,
+                niw=unique,
+                device_info__rack__name='808',
+                device_info__rack__server_room__name='Server Room 33',
+            )
         for unique in ['654321', '321654']:
             BOAssetFactory(barcode=unique, sn=unique, niw=unique)
-
-        self.msg_error = 'Error in {}, request has return {} but expected {}.'
 
     def _search_results(self, url, field_name=None, value=None):
         if field_name and value:
@@ -843,3 +877,84 @@ class TestSearchEngine(TestCase):
             'none',
             assets_count - 1,
         )
+
+    def test_rack_empty(self):
+        self._check_results_length(
+            self.testing_urls['dc'], 'location_name', 'imaginary_rack', 0,
+        )
+
+    def test_rack_exact(self):
+        self._check_results_length(
+            self.testing_urls['dc'], 'location_name', '707', 4,
+        )
+
+    def test_rack_contains(self):
+        self._check_results_length(
+            self.testing_urls['dc'], 'location_name', '07', 0,
+        )
+
+    def test_server_room_exact(self):
+        self._check_results_length(
+            self.testing_urls['dc'], 'location_name', 'Server Room 404', 4,
+        )
+
+
+class TestDCLocationSearching(BaseSearchTest, TestCase):
+    def setUp(self):
+        super(TestDCLocationSearching, self).setUp()
+        self.asset_not_blade = DCAssetFactory(model__category__is_blade=False)
+        self.asset_blade = DCAssetFactory(model__category__is_blade=True)
+        self.asset_without_category = DCAssetFactory(model__category=None)
+
+    def get_required_fields(self):
+        return set(['data_center', 'server_room', 'rack', 'position'])
+
+    def _check_fields(self, search_query, required_fields, asset_data):
+        for field in required_fields:
+            asset = DCAssetFactory(**asset_data)
+            setattr(asset.device_info, field, None)
+            asset.device_info.save()
+
+            results = self._query_results(
+                self.testing_urls['dc'], search_query,
+            )
+            self.assertEqual(
+                len(results),
+                1,
+                "Asset with {} = None not match got: {}, exp: {}".format(
+                    field, len(results), 1,
+                )
+            )
+            self.assertEqual(
+                results[0].id,
+                asset.id,
+                "Found asset with id {} instead of {} for {} = None".format(
+                    results[0].id, asset.id, field,
+                )
+            )
+            asset.delete()
+
+    def test_not_blade_fields(self):
+        search_query = {
+            'without_assigned_location': 'checked',
+        }
+        required_fields = self.get_required_fields()
+        asset_data = {'model__category__is_blade': False}
+        self._check_fields(search_query, required_fields, asset_data)
+
+    def test_blade_fields(self):
+        search_query = {
+            'without_assigned_location': 'checked',
+        }
+        required_fields = self.get_required_fields()
+        required_fields.add('slot_no')
+        asset_data = {'model__category__is_blade': True}
+        self._check_fields(search_query, required_fields, asset_data)
+
+    def test_asset_without_category(self):
+        search_query = {
+            'without_assigned_location': 'checked',
+        }
+        required_fields = self.get_required_fields()
+        asset_data = {'model__category': None}
+        self._check_fields(search_query, required_fields, asset_data)

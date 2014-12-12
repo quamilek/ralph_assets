@@ -91,7 +91,9 @@ class AddSupportView(SupportView):
             support = self.form.save(commit=False)
             support.save(user=self.request.user)
             messages.success(self.request, self.message)
-            return HttpResponseRedirect(reverse('support_list'))
+            return HttpResponseRedirect(
+                reverse('edit_support', kwargs={'support_id': support.pk}),
+            )
         else:
             return super(AddSupportView, self).get(request, *args, **kwargs)
 

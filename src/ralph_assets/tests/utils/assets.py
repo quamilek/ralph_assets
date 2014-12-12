@@ -35,19 +35,20 @@ from ralph_assets.models_assets import (
     AssetModel,
     AssetOwner,
     AssetPurpose,
-    AssetStatus,
     AssetSource,
+    AssetStatus,
     AssetType,
     CoaOemOs,
-    DeviceInfo,
     DataCenter,
+    DeviceInfo,
     OfficeInfo,
     Orientation,
     Rack,
-    Service,
     ServerRoom,
+    Service,
     Warehouse,
 )
+from ralph_assets.models_dc_assets import Accessory, RackAccessory
 from ralph_assets.tests.utils import UserFactory
 
 category_code_set = 'ABCDEFGHIJKLMNOPRSTUVWXYZ1234567890'
@@ -149,6 +150,7 @@ class AssetModelFactory(DjangoModelFactory):
     type = AssetCategoryType.back_office
     manufacturer = SubFactory(AssetManufacturerFactory)
     category = SubFactory(AssetCategoryFactory)
+    height_of_device = 1
 
 
 class WarehouseFactory(DjangoModelFactory):
@@ -170,12 +172,29 @@ class ServerRoomFactory(DjangoModelFactory):
     data_center = SubFactory(DataCenterFactory)
 
 
+class AccessoryFactory(DjangoModelFactory):
+    FACTORY_FOR = Accessory
+
+    name = Sequence(lambda n: 'Accessory #{}'.format(n))
+
+
 class RackFactory(DjangoModelFactory):
     FACTORY_FOR = Rack
 
     name = Sequence(lambda n: 'Rack #{}'.format(n))
     data_center = SubFactory(DataCenterFactory)
     server_room = SubFactory(ServerRoomFactory)
+    visualization_col = fuzzy.FuzzyInteger(1, 10)
+    visualization_row = fuzzy.FuzzyInteger(1, 10)
+
+
+class RackAccessoryFactory(DjangoModelFactory):
+    FACTORY_FOR = RackAccessory
+
+    accessory = SubFactory(AccessoryFactory)
+    rack = SubFactory(RackFactory)
+    position = fuzzy.FuzzyInteger(1, 48)
+    remarks = Sequence(lambda n: 'Remarks #{}'.format(n))
 
 
 class DeviceInfoFactory(DjangoModelFactory):
@@ -184,9 +203,11 @@ class DeviceInfoFactory(DjangoModelFactory):
     u_level = random.randint(0, 100)
     u_height = random.randint(0, 100)
     rack_old = Sequence(lambda n: 'Rack #%s' % n)
-
     rack = SubFactory(RackFactory)
-    slot_no = fuzzy.FuzzyInteger(0, 100)
+    # slot_no: values from range 1-16 with an optional postfix 'A' or 'B'
+    slot_no = random.choice(list(itertools.chain(
+        *((str(i), str(i) + 'A', str(i) + 'B') for i in range(1, 17))
+    )))
     position = fuzzy.FuzzyInteger(1, 48)
     orientation = Orientation.front.id
 

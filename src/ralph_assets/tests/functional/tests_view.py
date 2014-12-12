@@ -37,6 +37,7 @@ from ralph_assets.licences.models import (
 )
 from ralph_assets.forms import DeviceForm
 from ralph_assets.models_assets import Asset, SAVE_PRIORITY
+from ralph_assets.models_support import Support
 from ralph_assets.tests.utils import (
     AjaxClient,
     AttachmentFactory,
@@ -248,6 +249,9 @@ class TestDevicesView(BaseViewsTest):
 
     def edit_obj_url(self, obj_id):
         return reverse('device_edit', args=(self.mode, obj_id))
+
+    def get_add_asset_url(self):
+        return reverse('add_device', args=(self.mode,))
 
     def listing_url(self):
         return reverse('asset_search', args=(self.mode,))
@@ -1216,8 +1220,11 @@ class TestSupportsView(TestRegions, BaseViewsTest):
         """
         request_data = self.support_data.copy()
         response = self.client.post(reverse('add_support'), request_data)
+        support = Support.objects.order_by('-id')[0]
         self.assertRedirects(
-            response, reverse('support_list'), status_code=302,
+            response,
+            reverse('edit_support', kwargs={'support_id': support.id}),
+            status_code=302,
             target_status_code=200,
         )
         support = models_support.Support.objects.reverse()[0]
@@ -2372,3 +2379,111 @@ class TestManagementIp(TestDevicesView):
         })
         response = self.client.get(url)
         self.assertNotContains(response, 'management_ip')
+
+
+class TestAddDeviceInfoForm(TestDevicesView, BaseViewsTest):
+
+    mode = 'dc'
+    asset_factory = DCAssetFactory
+
+    def setUp(self):
+        super(TestAddDeviceInfoForm, self).setUp()
+        self.url = self.get_add_asset_url()
+
+    def test_slotno_required_positive(self):
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=True)
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no': '3',
+        })
+        response = self.client.post(self.url, form_data, follow=True)
+        self.assertFalse(response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+        self.assertTrue(Asset.objects.get(sn=form_data['sn']))
+
+    def test_slotno_required_negative(self):
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=True)
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no': '',
+        })
+        response = self.client.post(self.url, form_data)
+        self.assertIn('slot_no', response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+
+    def test_slotno_optional(self):
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=False)
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no': '',
+        })
+        response = self.client.post(self.url, form_data, follow=True)
+        self.assertFalse(response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+        self.assertTrue(Asset.objects.get(sn=form_data['sn']))
+
+
+class TestEditDeviceInfoForm(TestDevicesView, BaseViewsTest):
+
+    mode = 'dc'
+    asset_factory = DCAssetFactory
+
+    def setUp(self):
+        super(TestEditDeviceInfoForm, self).setUp()
+        self.asset = self.asset_factory()
+        self.url = self.edit_obj_url(self.asset.id)
+
+    def test_slotno_required_positive(self):
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=True)
+        new_slot_no = unicode(int(self.asset.device_info.slot_no[0]) + 1) + 'B'
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no':  new_slot_no,
+            'asset': '',
+        })
+        response = self.client.post(self.url, form_data, follow=True)
+        self.assertFalse(response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+        asset = Asset.objects.get(pk=self.asset.id)
+        self.assertNotEqual(
+            asset.device_info.slot_no, self.asset.device_info.slot_no,
+        )
+        self.assertEqual(asset.device_info.slot_no, form_data['slot_no'])
+
+    def test_slotno_required_negative(self):
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=True)
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no': '',
+            'asset': '',
+        })
+        response = self.client.post(self.url, form_data)
+        self.assertIn('slot_no', response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+        asset = Asset.objects.get(pk=self.asset.id)
+        self.assertEqual(
+            asset.device_info.slot_no, self.asset.device_info.slot_no,
+        )
+        self.assertNotEqual(asset.device_info.slot_no, form_data['slot_no'])
+
+    def test_slotno_optional(self):
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=False)
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no': '',
+            'asset': '',
+        })
+        response = self.client.post(self.url, form_data, follow=True)
+        self.assertFalse(response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+        asset = Asset.objects.get(pk=self.asset.id)
+        self.assertEqual(asset.device_info.slot_no, '')
+        # check editing was successful, so any field has changed
+        self.assertEqual(asset.price, form_data['price'])
+        self.assertNotEqual(self.asset.price, asset.price)

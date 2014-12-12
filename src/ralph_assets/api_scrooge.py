@@ -9,9 +9,28 @@ import logging
 
 from django.db.models import Q
 
+from ralph.util.api import Getter
+from ralph_assets.licences.models import Licence
 from ralph_assets.models_assets import Asset, AssetModel, AssetType, Warehouse
+from ralph_assets.models_support import Support
 
 logger = logging.getLogger(__name__)
+
+
+class DatedGetter(Getter):
+    """
+    Returns only items that have a timespan (marked by begin_field and
+    end_field) that contains given date"""
+
+    def __init__(self, date, *args, **kwargs):
+        self.date = date
+        super(DatedGetter, self).__init__(*args, **kwargs)
+
+    def get_queryset(self):
+        return super(DatedGetter, self).get_queryset().filter(**{
+            self.begin_field + '__lte': self.date,
+            self.end_field + '__gte': self.date,
+        })
 
 
 def get_warehouses():
@@ -76,3 +95,43 @@ def get_assets(date):
             'price': asset.price,
             'model_id': asset.model_id,
         }
+
+
+class get_supports(DatedGetter):
+    """Gets data for DC supports."""
+
+    Model = Support
+    begin_field = 'date_from'
+    end_field = 'date_to'
+
+    filters = {'asset_type': AssetType.data_center, 'price__gt': 0}
+    fields = [
+        ('support_id', 'id'),
+        'name',
+        'price',
+        'date_from',
+        'date_to',
+        ('assets', (lambda support: [
+            asset.id for asset in support.assets.all()
+        ]))
+    ]
+
+
+class get_licences(DatedGetter):
+    """Gets data for DC licences."""
+
+    Model = Licence
+    begin_field = 'invoice_date'
+    end_field = 'valid_thru'
+
+    filters = {'asset_type': AssetType.data_center}
+
+    fields = [
+        ('software_category', 'software_category__name'),
+        'price',
+        'invoice_date',
+        'valid_thru',
+        ('assets', (lambda licence: [
+            asset.id for asset in licence.assets.all()
+        ]))
+    ]

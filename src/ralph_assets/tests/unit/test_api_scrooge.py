@@ -17,6 +17,11 @@ from ralph_assets.tests.utils.assets import (
     AssetModelFactory,
     WarehouseFactory,
 )
+from ralph_assets.tests.utils.supports import (
+    DCSupportFactory,
+    BOSupportFactory,
+)
+from ralph_assets.api_scrooge import get_supports
 
 
 class TestApiScrooge(TestCase):
@@ -116,7 +121,10 @@ class TestApiScrooge(TestCase):
         )
 
     def test_get_asset_without_hostname(self):
-        asset = DCAssetFactory(region=Region.get_default_region())
+        asset = DCAssetFactory(
+            region=Region.get_default_region(),
+            invoice_date=date(2013, 11, 11),
+        )
         asset.device_info.ralph_device_id = None
         asset.device_info.save()
         today = date(2013, 11, 12)
@@ -152,3 +160,28 @@ class TestApiScrooge(TestCase):
         today = date(2013, 11, 12)
         result = [a for a in api_scrooge.get_assets(today)]
         self.assertEquals(result, [])
+
+    def test_get_supports(self):
+        DCSupportFactory(
+            date_from=date(2013, 11, 12),
+            date_to=date(2014, 11, 12)
+        )
+        DCSupportFactory(
+            date_from=date(2013, 11, 13),
+            date_to=date(2014, 11, 12)
+        )
+        DCSupportFactory(
+            date_from=date(2013, 11, 13),
+            date_to=date(2014, 11, 12),
+            price=0,
+        )
+        DCSupportFactory(
+            date_from=date(2012, 11, 13),
+            date_to=date(2013, 11, 11)
+        )
+        BOSupportFactory(
+            date_from=date(2013, 11, 12),
+            date_to=date(2014, 11, 12)
+        )
+        supports = get_supports(date(2013, 11, 12))
+        self.assertEqual(len(list(supports)), 1)

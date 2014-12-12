@@ -17,4 +17,3 @@ script:
   make test-with-coveralls
 after_success:
   - coveralls
-  - codecov
