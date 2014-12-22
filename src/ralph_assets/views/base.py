@@ -148,22 +148,31 @@ class AssetsBase(ACLGateway, MenuMixin, TemplateView):
             asset_form.model.category.is_blade = True, then
             device_info.slot_no is required
         """
-        try:
-            model = self.asset_form.cleaned_data['model']
-            is_blade = model.category.is_blade
-        except (AttributeError, KeyError):
-            is_blade = False
-        else:
-            try:
-                slot_no = self.additional_info.cleaned_data['slot_no']
-            except (AttributeError, KeyError):
-                slot_no = None
-            if is_blade and slot_no in [None, '']:
-                errors = getattr(self.additional_info, 'errors', {})
-                slot_no_errors = errors.setdefault('slot_no', [])
-                msg = "'slot number' is required when asset is blade"
-                slot_no_errors.append(msg)
-                raise ValidationError('Correct errors, please')
+        def set_error_message(form, field_name, msg):
+            errors = getattr(form, 'errors', {})
+            field_error = errors.setdefault(field_name, [])
+            field_error.append(msg)
+
+        model = self.asset_form.cleaned_data.get('model')
+        slot_no = self.additional_info.cleaned_data.get('slot_no')
+        if model and not model.category.is_blade and slot_no not in [None, '']:
+            # slot_no cant be set when asset is not blade
+            set_error_message(
+                form=self.additional_info,
+                field_name='slot_no',
+                msg=_("Field can't be set if asset is other than blade"),
+            )
+        if model and model.category.is_blade and slot_no in [None, '']:
+            # slot_no is required when asset is blade
+            set_error_message(
+                form=self.additional_info,
+                field_name='slot_no',
+                msg=_("Field is required when asset is blade"),
+            )
+        for form_name in ['asset_form', 'additional_info']:
+            form = getattr(self, form_name)
+            if form.errors:
+                raise ValidationError(_('Correct errors, please'))
 
 
 class DataTableColumnAssets(DataTableColumn):

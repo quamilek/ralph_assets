@@ -420,8 +420,7 @@ class TransitionView(ActiveSubmoduleByAssetMixin, _AssetSearch):
                     _("Transitions performed successfully"),
                 )
                 self.transition_ended = True
-            finally:
-                return super(TransitionView, self).get(*args, **kwargs)
+            return super(TransitionView, self).get(*args, **kwargs)
         messages.error(self.request, _('Please correct errors.'))
         return super(TransitionView, self).get(*args, **kwargs)
 

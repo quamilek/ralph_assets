@@ -876,6 +876,12 @@ class Asset(
     def asset_type(self):
         return self.type
 
+    def get_related_assets(self):
+        return Asset.objects.filter(
+            device_info__position=self.device_info.position,
+            device_info__rack=self.device_info.rack,
+        ).exclude(id=self.id)
+
 
 class CoaOemOs(Named):
     """Define oem installed operating system"""

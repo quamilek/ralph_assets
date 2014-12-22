@@ -213,6 +213,7 @@ class BaseViewsTest(ClientMixin, TransactionTestCase):
         form_data = {}
         for form_name in forms_name:
             form_data.update(response.context[form_name].__dict__['initial'])
+        form_data = {k: v for k, v in form_data.iteritems() if v is not None}
         return form_data
 
 
@@ -519,6 +520,7 @@ class TestDataCenterDevicesView(TestDevicesView, TestRegions, BaseViewsTest):
             'asset': '',  # required button
             'ralph_device_id': '',
             'region': Region.get_default_region().id,
+            'slot_no': '',
             'status': str(TestHostnameAssigning.trigger_status.id),
         }
         self._test_hostname_is_assigned(extra_data)
@@ -717,6 +719,7 @@ class TestBackOfficeDevicesView(TestDevicesView, TestRegions, BaseViewsTest):
         extra_data = {
             # required data for this test
             'asset': '',  # required button
+            'slot_no': '',
             'status': str(TestHostnameAssigning.trigger_status.id),
             'region': Region.get_default_region().id,
         }
@@ -2425,6 +2428,18 @@ class TestAddDeviceInfoForm(TestDevicesView, BaseViewsTest):
         self.assertFalse(response.context['asset_form'].errors)
         self.assertTrue(Asset.objects.get(sn=form_data['sn']))
 
+    def test_slotno_cant_be_set(self):
+        """test slot_no cant be set if asset category is not blade"""
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=False)
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no': 3,
+        })
+        response = self.client.post(self.url, form_data, follow=True)
+        self.assertIn('slot_no', response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+
 
 class TestEditDeviceInfoForm(TestDevicesView, BaseViewsTest):
 
@@ -2439,10 +2454,9 @@ class TestEditDeviceInfoForm(TestDevicesView, BaseViewsTest):
     def test_slotno_required_positive(self):
         form_data = self.get_asset_form_data()
         blade_model = AssetModelFactory(category__is_blade=True)
-        new_slot_no = unicode(int(self.asset.device_info.slot_no[0]) + 1) + 'B'
         form_data.update({
             'model': blade_model.id,
-            'slot_no':  new_slot_no,
+            'slot_no': '3',
             'asset': '',
         })
         response = self.client.post(self.url, form_data, follow=True)
@@ -2487,3 +2501,23 @@ class TestEditDeviceInfoForm(TestDevicesView, BaseViewsTest):
         # check editing was successful, so any field has changed
         self.assertEqual(asset.price, form_data['price'])
         self.assertNotEqual(self.asset.price, asset.price)
+
+    def test_slotno_cant_be_set(self):
+        """test slot_no cant be set if asset category is not blade"""
+        form_data = self.get_asset_form_data()
+        blade_model = AssetModelFactory(category__is_blade=False)
+        form_data.update({
+            'model': blade_model.id,
+            'slot_no': 3,
+            'asset': '',
+        })
+        response = self.client.post(self.url, form_data, follow=True)
+        self.assertIn('slot_no', response.context['additional_info'].errors)
+        self.assertFalse(response.context['asset_form'].errors)
+        asset = Asset.objects.get(pk=self.asset.id)
+        self.assertEqual(
+            asset.device_info.slot_no, self.asset.device_info.slot_no,
+        )
+        # check editing was failed, so any field hasn't changed
+        self.assertNotEqual(asset.price, form_data['price'])
+        self.assertEqual(self.asset.price, asset.price)

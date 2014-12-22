@@ -13,7 +13,6 @@ from rest_framework.test import APIClient
 
 from ralph_assets.models_assets import Orientation
 from ralph_assets.rest.asset_info_per_rack import (
-    TYPE_EMPTY,
     TYPE_ACCESSORY,
     TYPE_ASSET,
 )
@@ -33,8 +32,14 @@ class TestRestAssetInfoPerRack(TestCase):
         self.rack_1 = RackFactory(max_u_height=3)
         rack_2 = RackFactory()
 
-        self.asset_1 = AssetFactory(device_info__position=1)
-        self.asset_2 = AssetFactory(device_info__position=2)
+        self.asset_1 = AssetFactory(
+            device_info__position=1,
+            device_info__slot_no='',
+        )
+        self.asset_2 = AssetFactory(
+            device_info__position=2,
+            device_info__slot_no='',
+        )
         asset_3 = AssetFactory()
 
         self.rack_1.deviceinfo_set.add(self.asset_1.device_info)
@@ -63,66 +68,52 @@ class TestRestAssetInfoPerRack(TestCase):
                 '/assets/api/rack/{0}/'.format(self.rack_1.id)
             ).content
         )
+        self.maxDiff = None
         expected_json = {
-            'name': self.rack_1.name,
-            'max_u_height': self.rack_1.max_u_height,
-            'sides': [
+            'info': {
+                'id': self.rack_1.id,
+                'name': self.rack_1.name,
+                'data_center': self.rack_1.data_center.id,
+                'server_room': self.rack_1.server_room.id,
+                'max_u_height': self.rack_1.max_u_height,
+                'visualization_col': self.rack_1.visualization_col,
+                'visualization_row': self.rack_1.visualization_row,
+                'free_u': self.rack_1.get_free_u(),
+                'description': '{}'.format(self.rack_1.description),
+                'orientation': '{}'.format(self.rack_1.get_orientation_desc())
+            },
+            'front': [
                 {
-                    'type': 'front',
-                    'items': [
-                        {
-                            '_type': TYPE_ASSET,
-                            'asset_id': self.asset_1.id,
-                            'url': self.asset_1.url,
-                            'barcode': self.asset_1.barcode,
-                            'sn': self.asset_1.sn,
-                            'height': self.asset_1.model.height_of_device,
-                            'position': self.asset_1.device_info.position,
-                            'model': self.asset_1.model.name,
-                        },
-                        {
-                            '_type': TYPE_ASSET,
-                            'asset_id': self.asset_2.id,
-                            'url': self.asset_2.url,
-                            'barcode': self.asset_2.barcode,
-                            'sn': self.asset_2.sn,
-                            'height': self.asset_2.model.height_of_device,
-                            'position': self.asset_2.device_info.position,
-                            'model': self.asset_2.model.name,
-                        }, {
-
-
-
-                            '_type': TYPE_ACCESSORY,
-                            'position': self.rack1_accessory.position,
-                            'remarks': self.rack1_accessory.remarks,
-                            'type': self.rack1_accessory.accessory.name,
-
-
-
-                        }, {
-                            '_type': TYPE_EMPTY,
-                            'position': 3,
-                        }
-                    ]
+                    '_type': TYPE_ASSET,
+                    'id': self.asset_1.id,
+                    'url': '{}'.format(self.asset_1.url),
+                    'category': '{}'.format(self.asset_1.model.category),
+                    'barcode': self.asset_1.barcode,
+                    'sn': '{}'.format(self.asset_1.sn),
+                    'height': float(self.asset_1.model.height_of_device),
+                    'position': self.asset_1.device_info.position,
+                    'model': self.asset_1.model.name,
+                    'children': [],
                 },
                 {
-                    'type': 'back',
-                    'items': [
-                        {
-                            '_type': TYPE_EMPTY,
-                            'position': 1,
-                        },
-                        {
-                            '_type': TYPE_EMPTY,
-                            'position': 2,
-                        },
-                        {
-                            '_type': TYPE_EMPTY,
-                            'position': 3,
-                        }
-                    ],
-                }
-            ]
+                    '_type': TYPE_ASSET,
+                    'id': self.asset_2.id,
+                    'url': '{}'.format(self.asset_2.url),
+                    'category': '{}'.format(self.asset_2.model.category),
+                    'barcode': self.asset_2.barcode,
+                    'sn': '{}'.format(self.asset_2.sn),
+                    'height': float(self.asset_2.model.height_of_device),
+                    'position': self.asset_2.device_info.position,
+                    'model': self.asset_2.model.name,
+                    'children': [],
+                },
+                {
+                    '_type': TYPE_ACCESSORY,
+                    'position': self.rack1_accessory.position,
+                    'remarks': self.rack1_accessory.remarks,
+                    'type': self.rack1_accessory.accessory.name,
+                },
+            ],
+            'back': []
         }
         self.assertEquals(returned_json, expected_json)

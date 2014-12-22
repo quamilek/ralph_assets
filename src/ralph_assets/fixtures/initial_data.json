@@ -2275,5 +2275,40 @@
       "fields": {
          "name": "change_hostname"
       }
-   }
+   },
+    {
+        "pk": 1,
+        "model": "ralph_assets.accessory",
+        "fields": {
+            "name": "brush"
+        }
+    },
+    {
+        "pk": 4,
+        "model": "ralph_assets.accessory",
+        "fields": {
+            "name": "organizer"
+        }
+    },
+    {
+        "pk": 2,
+        "model": "ralph_assets.accessory",
+        "fields": {
+            "name": "patch_panel_fc"
+        }
+    },
+    {
+        "pk": 3,
+        "model": "ralph_assets.accessory",
+        "fields": {
+            "name": "patch_panel_utp"
+        }
+    },
+    {
+        "pk": 5,
+        "model": "ralph_assets.accessory",
+        "fields": {
+            "name": "power_socket"
+        }
+    }
 ]

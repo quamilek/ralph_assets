@@ -428,17 +428,20 @@ class AccessoryInline(admin.TabularInline):
 class RackAdmin(ModelAdmin):
     form = RackForm
     save_on_top = True
+    raw_id_fields = ('deprecated_ralph_rack',)
     list_display = ('name', 'data_center', 'server_room', 'max_u_height',)
     search_fields = ('name', 'data_center', 'server_room', 'max_u_height',)
     fieldsets = (
         (None, {
             'fields': (
                 'name', 'data_center', 'server_room', 'max_u_height',
-                'deprecated_ralph_rack',
+                'deprecated_ralph_rack', 'description'
             ),
         }),
         (_('Visualization'), {
-            'fields': ('visualization_col', 'visualization_row'),
+            'fields': (
+                'visualization_col', 'visualization_row', 'orientation'
+            ),
         }),
     )
     inlines = [

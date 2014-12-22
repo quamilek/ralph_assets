@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
@@ -19,6 +18,7 @@ from lck.django.common.models import (
 )
 
 from django.db import models
+from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete
 from django.db.utils import DatabaseError
 from django.dispatch import receiver
@@ -68,6 +68,15 @@ class Orientation(Choices):
             [choice.id for choice in cls.DEPTH.choices]
         )
         return is_depth
+
+
+class RackOrientation(Choices):
+    _ = Choices.Choice
+
+    top = _("top")
+    bottom = _("bottom")
+    left = _("left")
+    right = _("right")
 
 
 class DeprecatedRalphDCManager(models.Manager):
@@ -129,6 +138,14 @@ class Accessory(Named):
         verbose_name_plural = _('accessories')
 
 
+class RackManager(models.Manager):
+    def with_free_u(self):
+        racks = self.get_query_set()
+        for rack in racks:
+            rack.free_u = rack.get_free_u()
+        return racks
+
+
 class Rack(Named.NonUnique):
     class Meta:
         unique_together = ('name', 'data_center')
@@ -138,6 +155,13 @@ class Rack(Named.NonUnique):
         ServerRoom, verbose_name=_("server room"),
         null=True,
         blank=True,
+    )
+    description = models.CharField(
+        _('description'), max_length=250, blank=True
+    )
+    orientation = models.PositiveIntegerField(
+        choices=RackOrientation(),
+        default=RackOrientation.top.id,
     )
     max_u_height = models.IntegerField(default=48)
     deprecated_ralph_rack = models.ForeignKey(
@@ -153,6 +177,31 @@ class Rack(Named.NonUnique):
         default=0,
     )
     accessories = models.ManyToManyField(Accessory, through='RackAccessory')
+    objects = RackManager()
+
+    def get_free_u(self):
+        assets = self.get_root_assets()
+        assets_height = assets.aggregate(
+            sum=Sum('model__height_of_device'))['sum'] or 0
+        # accesory always has 1U of height
+        accessories = RackAccessory.objects.values_list(
+            'position', flat=True).filter(rack=self)
+        return self.max_u_height - assets_height - len(set(accessories))
+
+    def get_orientation_desc(self):
+        return RackOrientation.name_from_id(self.orientation)
+
+    def get_root_assets(self, side=None):
+        from ralph_assets.models_assets import Asset
+        filter_kwargs = {
+            'device_info__rack': self,
+            'device_info__slot_no': '',
+        }
+        if side:
+            filter_kwargs['device_info__orientation'] = side
+        return Asset.objects.select_related(
+            'model', 'device_info'
+        ).filter(**filter_kwargs).exclude(model__category__is_blade=True)
 
     def __unicode__(self):
         name = self.name
@@ -178,6 +227,9 @@ class RackAccessory(models.Model):
         max_length=1024,
         blank=True,
     )
+
+    def get_orientation_desc(self):
+        return Orientation.name_from_id(self.orientation)
 
     def __unicode__(self):
         rack_name = self.rack.name if self.rack else ''
@@ -284,6 +336,9 @@ class DeviceInfo(TimeTrackable, SavingUser, SoftDeletable):
             return dev
         except Device.DoesNotExist:
             return None
+
+    def get_orientation_desc(self):
+        return Orientation.name_from_id(self.orientation)
 
     def __init__(self, *args, **kwargs):
         self.save_comment = None

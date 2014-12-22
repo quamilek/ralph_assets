@@ -204,10 +204,6 @@ class DeviceInfoFactory(DjangoModelFactory):
     u_height = random.randint(0, 100)
     rack_old = Sequence(lambda n: 'Rack #%s' % n)
     rack = SubFactory(RackFactory)
-    # slot_no: values from range 1-16 with an optional postfix 'A' or 'B'
-    slot_no = random.choice(list(itertools.chain(
-        *((str(i), str(i) + 'A', str(i) + 'B') for i in range(1, 17))
-    )))
     position = fuzzy.FuzzyInteger(1, 48)
     orientation = Orientation.front.id
 
@@ -365,9 +361,7 @@ class BOAssetFactory(BaseAssetFactory):
 
 def get_device_info_dict():
     device_info = DeviceInfoFactory()
-    device_info_keys = {
-        'orientation', 'position', 'ralph_device_id', 'slot_no',
-    }
+    device_info_keys = {'orientation', 'position', 'ralph_device_id'}
     device_info_data = {
         k: getattr(device_info, k) for k in device_info_keys
     }

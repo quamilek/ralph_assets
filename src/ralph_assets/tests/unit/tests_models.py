@@ -14,12 +14,14 @@ from ralph.business.models import Venture
 from ralph.discovery.models_device import Device, DeviceType
 
 from ralph_assets.api_pricing import get_assets, get_asset_parts
-from ralph_assets.models_assets import AssetStatus, PartInfo
+from ralph_assets.models_assets import AssetStatus, PartInfo, Rack
 from ralph_assets.licences.models import LicenceAsset, Licence, WrongModelError
 from ralph_assets.tests.utils.assets import (
     AssetSubCategoryFactory,
     AssetModelFactory,
     AssetFactory,
+    DCAssetFactory,
+    RackFactory,
     ServiceFactory,
 )
 from ralph_assets.tests.utils.supports import DCSupportFactory
@@ -283,3 +285,52 @@ class TestModelHistory(TestCase):
             self.assertEqual(i + 2, history.count())
             licence.assign(asset, i + 1)
             self.assertEqual(i + 3, history.count())
+
+
+class TestModelRack(TestCase):
+    def test_free_u(self):
+        rack = RackFactory()
+        rack = Rack.objects.with_free_u()[0]
+        rack_height = 48
+        self.assertEqual(rack.free_u, rack_height)
+
+        # mount 2U device to rack
+        asset_count = 10
+        model_height = 2
+        model = AssetModelFactory(height_of_device=model_height)
+        [
+            DCAssetFactory(
+                device_info__rack=rack, model=model, device_info__slot_no=''
+            )
+            for _ in range(asset_count)
+        ]
+        rack = Rack.objects.with_free_u()[0]
+        self.assertEqual(
+            rack.free_u, rack_height - (asset_count * model_height)
+        )
+
+    def test_get_child_for_blade_chasiss(self):
+        position = 3
+        rack = RackFactory()
+        chasiss = DCAssetFactory(
+            device_info__rack=rack,
+            device_info__position=position,
+            model__height_of_device=10,
+        )
+        [
+            DCAssetFactory(
+                device_info__rack=rack,
+                device_info__position=position,
+                model__category__is_blade=True,
+            )
+            for _ in range(5)
+        ]
+        [
+            DCAssetFactory(
+                device_info__position=position,
+                model__category__is_blade=True,
+            )
+            for _ in range(4)
+        ]
+        children = chasiss.get_related_assets()
+        self.assertEqual(children.count(), 5)

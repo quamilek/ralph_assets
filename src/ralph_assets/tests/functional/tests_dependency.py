@@ -48,6 +48,7 @@ class TestDependency(TestCase):
             'ralph_device_id': '',
             'region': Region.get_default_region().id,
             'service': self.ci_relation.parent.id,
+            'slot_no': 3,
             'slots': 2,
             'sn': '123456789',
             'type': MODE2ASSET_TYPE['dc'].id,

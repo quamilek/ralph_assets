@@ -33,6 +33,7 @@ class TestRackForm(TestCase):
                 'name': 'Rack 123',
                 'data_center': self.dc_1.id,
                 'max_u_height': 48,
+                'orientation': 1,
                 'visualization_col': 1,
                 'visualization_row': 1,
                 'rackaccessory_set-TOTAL_FORMS': 0,
@@ -59,6 +60,7 @@ class TestRackForm(TestCase):
                 'name': self.rack_1.name,
                 'data_center': self.dc_1.id,
                 'max_u_height': 48,
+                'orientation': 1,
                 'visualization_col': 1,
                 'visualization_row': 1,
                 'rackaccessory_set-TOTAL_FORMS': 0,
@@ -81,6 +83,7 @@ class TestRackForm(TestCase):
                 'name': 'Rack 123',
                 'data_center': self.dc_1.id,
                 'max_u_height': 48,
+                'orientation': 1,
                 'visualization_col': 5,
                 'visualization_row': 5,
                 'rackaccessory_set-TOTAL_FORMS': 0,
@@ -89,6 +92,7 @@ class TestRackForm(TestCase):
             },
             follow=True,
         )
+
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
             reverse(

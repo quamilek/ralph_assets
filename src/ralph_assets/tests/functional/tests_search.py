@@ -902,8 +902,13 @@ class TestSearchEngine(TestCase):
 class TestDCLocationSearching(BaseSearchTest, TestCase):
     def setUp(self):
         super(TestDCLocationSearching, self).setUp()
-        self.asset_not_blade = DCAssetFactory(model__category__is_blade=False)
-        self.asset_blade = DCAssetFactory(model__category__is_blade=True)
+        self.asset_not_blade = DCAssetFactory(
+            model__category__is_blade=False,
+        )
+        self.asset_blade = DCAssetFactory(
+            model__category__is_blade=True,
+            device_info__slot_no=2,
+        )
         self.asset_without_category = DCAssetFactory(model__category=None)
 
     def get_required_fields(self):
