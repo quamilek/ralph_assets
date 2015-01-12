@@ -327,6 +327,11 @@ class AssetsResource(ModelResource):
             expiration=EXPIRATION,
         )
 
+    def get_object_list(self, request):
+        # Workaround for RegionMiddleware
+        # Resource.queryset is evaluated at module load
+        return Asset.objects.all()
+
 
 class UserAssignmentsResource(ModelResource):
     is_m2m = True

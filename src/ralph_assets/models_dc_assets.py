@@ -191,6 +191,14 @@ class Rack(Named.NonUnique):
     def get_orientation_desc(self):
         return RackOrientation.name_from_id(self.orientation)
 
+    def get_pdus(self):
+        from ralph_assets.models_assets import Asset
+        return Asset.objects.select_related('model', 'device_info').filter(
+            device_info__rack=self,
+            device_info__orientation__in=(Orientation.left, Orientation.right),
+            device_info__position=0,
+        )
+
     def get_root_assets(self, side=None):
         from ralph_assets.models_assets import Asset
         filter_kwargs = {
@@ -200,7 +208,7 @@ class Rack(Named.NonUnique):
         if side:
             filter_kwargs['device_info__orientation'] = side
         return Asset.objects.select_related(
-            'model', 'device_info'
+            'model', 'device_info', 'model__category'
         ).filter(**filter_kwargs).exclude(model__category__is_blade=True)
 
     def __unicode__(self):

@@ -14,6 +14,7 @@ from ralph_assets.models import Asset
 TYPE_EMPTY = 'empty'
 TYPE_ACCESSORY = 'accessory'
 TYPE_ASSET = 'asset'
+TYPE_PDU = 'pdu'
 
 
 class RelatedAssetSerializer(serializers.ModelSerializer):
@@ -56,6 +57,19 @@ class RackAccessorySerializer(serializers.ModelSerializer):
     class Meta:
         model = RackAccessory
         fields = ('position', 'remarks', 'type', '_type')
+
+
+class PDUSerializer(serializers.ModelSerializer):
+    model = serializers.CharField(source='model.name')
+    orientation = serializers.IntegerField(source='get_orientation_desc')
+    url = serializers.CharField(source='url')
+
+    def get_type(self, obj):
+        return TYPE_PDU
+
+    class Meta:
+        model = Asset
+        fields = ('model', 'sn', 'orientation', 'url')
 
 
 class RackSerializer(serializers.ModelSerializer):

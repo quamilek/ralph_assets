@@ -12,7 +12,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from ralph_assets.models_assets import Orientation
-from ralph_assets.rest.asset_info_per_rack import (
+from ralph_assets.rest.serializers.models_dc_asssets import (
     TYPE_ACCESSORY,
     TYPE_ASSET,
 )
@@ -114,6 +114,7 @@ class TestRestAssetInfoPerRack(TestCase):
                     'type': self.rack1_accessory.accessory.name,
                 },
             ],
-            'back': []
+            'back': [],
+            'pdus': []
         }
         self.assertEquals(returned_json, expected_json)

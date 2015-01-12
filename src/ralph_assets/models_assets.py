@@ -877,10 +877,13 @@ class Asset(
         return self.type
 
     def get_related_assets(self):
-        return Asset.objects.filter(
+        return Asset.objects.select_related('device_info', 'model').filter(
             device_info__position=self.device_info.position,
             device_info__rack=self.device_info.rack,
         ).exclude(id=self.id)
+
+    def get_orientation_desc(self):
+        return self.device_info.get_orientation_desc()
 
 
 class CoaOemOs(Named):

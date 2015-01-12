@@ -21,12 +21,12 @@ def _can_not_edit_localization(asset_dev_info):
 
 def _get_core_parent(asset_dev_info):
     """
-    Finds parent for connectet Ralph device.
+    Finds parent for connected Ralph device.
 
     Returns:
     Tuple of two values:
     - parent device (rack or blade system) or None
-    - True if finded device is blade system
+    - True if found device is blade system
     """
 
     if (
@@ -102,7 +102,7 @@ def update_core_localization(asset_dev_info):
     DEPRECATED
 
     Synchronize Asset localization with Ralph Core localization - for backward
-    compatibility. In future, localization will be stored only for Asset.
+    compatibility. In the future, localization will be stored only for Asset.
     """
 
     device = asset_dev_info.get_ralph_device()

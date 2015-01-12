@@ -578,34 +578,44 @@ class DeviceForm(ModelForm):
             return create_stock
 
     def clean(self):
+        """Check if device selected in this form (represented by
+        'ralph_device_id') is already assigned/linked to another asset.
+        If yes, the 'force_unlink' box should be ticked (causing that other
+        asset to unlink) , otherwise an error should be reported.
+        Obviously, the case when a given device is already assigned/linked
+        to the asset being actually edited should be excluded - hence
+        "int(ralph_device_id) != instance_ralph_device_id".
+        """
         ralph_device_id = self.cleaned_data.get('ralph_device_id')
         force_unlink = self.cleaned_data.get('force_unlink')
-        if ralph_device_id:
-            device_info = None
+        instance_ralph_device_id = getattr(self.instance, 'ralph_device_id',
+                                           None)
+        if (ralph_device_id and
+                int(ralph_device_id) != instance_ralph_device_id):
             try:
-                device_info = self.instance.__class__.objects.get(
-                    ralph_device_id=ralph_device_id
+                asset = Asset.objects_dc.get(
+                    device_info__ralph_device_id=ralph_device_id
                 )
-            except DeviceInfo.DoesNotExist:
+            except Asset.DoesNotExist:
                 pass
-            if device_info:
-                # if we want to assign ralph_device_id that belongs to another
-                # Asset/DeviceInfo...
-                if (str(device_info.ralph_device_id) == ralph_device_id and
-                        device_info.id != self.instance.id):
-                    if force_unlink:
-                        device_info.ralph_device_id = None
-                        device_info.save()
-                    else:
-                        msg = _(
-                            'Device with this Ralph device id already exist '
-                            '<a href="../{}">(click here to see it)</a>. '
-                            'Please tick "Force unlink" checkbox if you want '
-                            'to unlink it.'
-                        )
-                        self._errors["ralph_device_id"] = self.error_class([
-                            mark_safe(msg.format(escape(device_info.asset.id)))
-                        ])
+            else:
+                if force_unlink:
+                    asset.device_info.ralph_device_id = None
+                    asset.device_info.save()
+                else:
+                    linked_asset_url = reverse(
+                        'device_edit',
+                        kwargs={'mode': 'dc', 'asset_id': asset.id},
+                    )
+                    msg = _(
+                        'This device is already linked to another asset '
+                        '<a href="{}">(click here to see it)</a>. '
+                        'Please tick "Force unlink" checkbox if you want '
+                        'to unlink it.'
+                    )
+                    self._errors["ralph_device_id"] = self.error_class([
+                        mark_safe(msg.format(escape(linked_asset_url)))
+                    ])
         return self.cleaned_data
 
 

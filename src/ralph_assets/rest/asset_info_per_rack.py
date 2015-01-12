@@ -13,17 +13,11 @@ from rest_framework.views import APIView
 from ralph_assets.models_assets import Orientation, Rack
 from ralph_assets.models_dc_assets import RackAccessory
 from ralph_assets.views.base import ACLGateway
-
-
-TYPE_EMPTY = 'empty'
-TYPE_ACCESSORY = 'accessory'
-TYPE_ASSET = 'asset'
-
-
 from ralph_assets.rest.serializers.models_dc_asssets import (
     AssetSerializer,
     RackAccessorySerializer,
     RackSerializer,
+    PDUSerializer,
 )
 
 
@@ -45,6 +39,9 @@ class AssetsView(ACLGateway, APIView):
         )
         return RackAccessorySerializer(accessories, many=True).data
 
+    def _get_pdus(self, rack):
+        return PDUSerializer(rack.get_pdus(), many=True).data
+
     def get(self, request, rack_id, format=None):
         rack = self.get_object(rack_id)
         devices = {}
@@ -53,5 +50,6 @@ class AssetsView(ACLGateway, APIView):
                 self._get_assets(rack, side) +
                 self._get_accessories(rack, side)
             )
+        devices['pdus'] = self._get_pdus(rack)
         devices['info'] = RackSerializer(rack).data
         return Response(devices)
