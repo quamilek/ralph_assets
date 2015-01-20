@@ -31,6 +31,7 @@ ASSETS_COLUMNS = [
     'warehouse__name',
     'invoice_date',
     'invoice_no',
+    'region__name',
 ]
 LICENCES_COLUMNS = [
     'niw',
@@ -50,6 +51,7 @@ LICENCES_ASSETS_COLUMNS = [
     'owner__username',
     'owner__first_name',
     'owner__last_name',
+    'region__name',
 ]
 LICENCES_USERS_COLUMNS = [
     'username',

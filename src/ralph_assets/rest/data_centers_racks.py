@@ -33,5 +33,5 @@ class DCRacksAPIView(ACLGateway, APIView):
         :returns list: list of informations about racks in given data center
         """
         return Response(
-            DCSerializer(self.get_object(data_center_id)).data['rack_set']
+            DCSerializer(self.get_object(data_center_id)).data
         )

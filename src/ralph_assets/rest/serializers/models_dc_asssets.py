@@ -7,7 +7,12 @@ from __future__ import unicode_literals
 
 from rest_framework import serializers
 
-from ralph_assets.models_dc_assets import DataCenter, Rack, RackAccessory
+from ralph_assets.models_dc_assets import (
+    DataCenter,
+    Rack,
+    RackAccessory,
+    RackOrientation,
+)
 from ralph_assets.models import Asset
 
 
@@ -31,6 +36,7 @@ class AssetSerializer(serializers.ModelSerializer):
     model = serializers.CharField(source='model.name')
     category = serializers.CharField(source='model.category.name')
     height = serializers.FloatField(source='model.height_of_device')
+    layout = serializers.CharField(source='model.get_layout_class')
     url = serializers.CharField(source='url')
     position = serializers.IntegerField(source='device_info.position')
     children = RelatedAssetSerializer(source='get_related_assets')
@@ -42,8 +48,8 @@ class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = (
-            'id', 'model', 'category', 'height', 'barcode', 'sn', 'url',
-            'position', 'children', '_type',
+            'id', 'model', 'category', 'height', 'layout', 'barcode', 'sn',
+            'url', 'position', 'children', '_type',
         )
 
 
@@ -84,11 +90,17 @@ class RackSerializer(serializers.ModelSerializer):
             'orientation',
         )
 
+    def update(self):
+        orientation = self.data['orientation']
+        self.object.orientation = RackOrientation.id_from_name(orientation)
+        return self.save(**self.data)
+
 
 class DCSerializer(serializers.ModelSerializer):
     rack_set = RackSerializer()
 
     class Meta:
         model = DataCenter
-        fields = ('id', 'name', 'rack_set')
+        fields = ('id', 'name', 'visualization_cols_num',
+                  'visualization_rows_num', 'rack_set')
         depth = 1

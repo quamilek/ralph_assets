@@ -8,14 +8,155 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # rename device_info rack to rack_old
+        db.rename_column('ralph_assets_deviceinfo', 'rack', 'rack_old')
 
-        # Changing field 'DeviceInfo.slot_no'
-        db.alter_column('ralph_assets_deviceinfo', 'slot_no', self.gf('django.db.models.fields.CharField')(max_length=3, null=True))
+        # Adding model 'Accessory'
+        db.create_table('ralph_assets_accessory', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=75, db_index=True)),
+        ))
+        db.send_create_signal('ralph_assets', ['Accessory'])
+
+        # Adding model 'RackAccessory'
+        db.create_table('ralph_assets_rackaccessory', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('accessory', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.Accessory'])),
+            ('rack', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.Rack'])),
+            ('data_center', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.DataCenter'], null=True)),
+            ('server_room', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.ServerRoom'], null=True)),
+            ('orientation', self.gf('django.db.models.fields.PositiveIntegerField')(default=1)),
+            ('position', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('remarks', self.gf('django.db.models.fields.CharField')(max_length=1024, blank=True)),
+        ))
+        db.send_create_signal('ralph_assets', ['RackAccessory'])
+
+        # Adding model 'Rack'
+        db.create_table('ralph_assets_rack', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=75)),
+            ('data_center', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.DataCenter'])),
+            ('server_room', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.ServerRoom'], null=True, blank=True)),
+            ('description', self.gf('django.db.models.fields.CharField')(max_length=250, blank=True)),
+            ('orientation', self.gf('django.db.models.fields.PositiveIntegerField')(default=1)),
+            ('max_u_height', self.gf('django.db.models.fields.IntegerField')(default=48)),
+            ('deprecated_ralph_rack', self.gf('django.db.models.fields.related.ForeignKey')(blank=True, related_name=u'deprecated_asset_rack', null=True, to=orm['discovery.Device'])),
+            ('visualization_col', self.gf('django.db.models.fields.PositiveIntegerField')(default=0)),
+            ('visualization_row', self.gf('django.db.models.fields.PositiveIntegerField')(default=0)),
+        ))
+        db.send_create_signal('ralph_assets', ['Rack'])
+
+        # Adding unique constraint on 'Rack', fields ['name', 'data_center']
+        db.create_unique('ralph_assets_rack', ['name', 'data_center_id'])
+
+        # Adding model 'DataCenter'
+        db.create_table('ralph_assets_datacenter', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=75, db_index=True)),
+            ('deprecated_ralph_dc', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['discovery.Device'], unique=True, null=True, blank=True)),
+            ('visualization_cols_num', self.gf('django.db.models.fields.PositiveIntegerField')(default=20)),
+            ('visualization_rows_num', self.gf('django.db.models.fields.PositiveIntegerField')(default=20)),
+        ))
+        db.send_create_signal('ralph_assets', ['DataCenter'])
+
+        # Adding model 'ServerRoom'
+        db.create_table('ralph_assets_serverroom', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=75)),
+            ('data_center', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.DataCenter'])),
+        ))
+        db.send_create_signal('ralph_assets', ['ServerRoom'])
+
+        # Adding field 'AssetModel.visualization_layout'
+        db.add_column('ralph_assets_assetmodel', 'visualization_layout',
+                      self.gf('django.db.models.fields.PositiveIntegerField')(default=1, blank=True),
+                      keep_default=False)
+
+        # Adding field 'DeviceInfo.data_center'
+        db.add_column('ralph_assets_deviceinfo', 'data_center',
+                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.DataCenter'], null=True),
+                      keep_default=False)
+
+        # Adding field 'DeviceInfo.server_room'
+        db.add_column('ralph_assets_deviceinfo', 'server_room',
+                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.ServerRoom'], null=True),
+                      keep_default=False)
+
+        # Adding field 'DeviceInfo.rack'
+        db.add_column('ralph_assets_deviceinfo', 'rack',
+                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ralph_assets.Rack'], null=True, blank=True),
+                      keep_default=False)
+
+        # Adding field 'DeviceInfo.slot_no'
+        db.add_column('ralph_assets_deviceinfo', 'slot_no',
+                      self.gf('django.db.models.fields.CharField')(max_length=3, null=True, blank=True),
+                      keep_default=False)
+
+        # Adding field 'DeviceInfo.position'
+        db.add_column('ralph_assets_deviceinfo', 'position',
+                      self.gf('django.db.models.fields.IntegerField')(null=True),
+                      keep_default=False)
+
+        # Adding field 'DeviceInfo.orientation'
+        db.add_column('ralph_assets_deviceinfo', 'orientation',
+                      self.gf('django.db.models.fields.PositiveIntegerField')(default=1),
+                      keep_default=False)
+
+        # Deleting field 'ReportOdtSource.template'
+        db.delete_column('ralph_assets_reportodtsource', 'template')
+
 
     def backwards(self, orm):
+        # rename device_info rack_old to rack
+        db.rename_column('ralph_assets_deviceinfo', 'rack_old', 'rack')
 
-        # Changing field 'DeviceInfo.slot_no'
-        db.alter_column('ralph_assets_deviceinfo', 'slot_no', self.gf('django.db.models.fields.IntegerField')(null=True))
+        # Removing unique constraint on 'Rack', fields ['name', 'data_center']
+        db.delete_unique('ralph_assets_rack', ['name', 'data_center_id'])
+
+        # Removing unique constraint on 'ReportOdtSourceLanguage', fields ['language', 'report_odt_source']
+        db.delete_unique('ralph_assets_reportodtsourcelanguage', ['language', 'report_odt_source_id'])
+
+        # Deleting model 'Accessory'
+        db.delete_table('ralph_assets_accessory')
+
+        # Deleting model 'RackAccessory'
+        db.delete_table('ralph_assets_rackaccessory')
+
+        # Deleting model 'Rack'
+        db.delete_table('ralph_assets_rack')
+
+        # Deleting model 'DataCenter'
+        db.delete_table('ralph_assets_datacenter')
+
+        # Deleting model 'ServerRoom'
+        db.delete_table('ralph_assets_serverroom')
+
+        # Deleting field 'AssetModel.visualization_layout'
+        db.delete_column('ralph_assets_assetmodel', 'visualization_layout')
+
+        # Deleting field 'DeviceInfo.data_center'
+        db.delete_column('ralph_assets_deviceinfo', 'data_center_id')
+
+        # Deleting field 'DeviceInfo.server_room'
+        db.delete_column('ralph_assets_deviceinfo', 'server_room_id')
+
+        # Deleting field 'DeviceInfo.rack'
+        db.delete_column('ralph_assets_deviceinfo', 'rack_id')
+
+        # Deleting field 'DeviceInfo.slot_no'
+        db.delete_column('ralph_assets_deviceinfo', 'slot_no')
+
+        # Deleting field 'DeviceInfo.position'
+        db.delete_column('ralph_assets_deviceinfo', 'position')
+
+        # Deleting field 'DeviceInfo.orientation'
+        db.delete_column('ralph_assets_deviceinfo', 'orientation')
+
+        # Adding field 'ReportOdtSource.template'
+        db.add_column('ralph_assets_reportodtsource', 'template',
+                      self.gf('django.db.models.fields.files.FileField')(default='', max_length=100),
+                      keep_default=False)
+
 
     models = {
         'account.profile': {
@@ -140,7 +281,7 @@ class Migration(SchemaMigration):
             'owners': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['cmdb.CIOwner']", 'through': "orm['cmdb.CIOwnership']", 'symmetrical': 'False'}),
             'pci_scope': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'relations': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['cmdb.CI']", 'through': "orm['cmdb.CIRelation']", 'symmetrical': 'False'}),
-            'state': ('django.db.models.fields.IntegerField', [], {'default': '2', 'max_length': '11'}),
+            'state': ('django.db.models.fields.IntegerField', [], {'default': '1', 'max_length': '11'}),
             'status': ('django.db.models.fields.IntegerField', [], {'default': '2', 'max_length': '11'}),
             'technical_service': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['cmdb.CIType']"}),
@@ -510,7 +651,8 @@ class Migration(SchemaMigration):
             'modified_by': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "u'+'", 'on_delete': 'models.SET_NULL', 'default': 'None', 'to': "orm['account.Profile']", 'blank': 'True', 'null': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '75'}),
             'power_consumption': ('django.db.models.fields.IntegerField', [], {'default': '0', 'blank': 'True'}),
-            'type': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'})
+            'type': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'}),
+            'visualization_layout': ('django.db.models.fields.PositiveIntegerField', [], {'default': '1', 'blank': 'True'})
         },
         'ralph_assets.assetowner': {
             'Meta': {'object_name': 'AssetOwner'},
@@ -673,9 +815,11 @@ class Migration(SchemaMigration):
             'accessories': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['ralph_assets.Accessory']", 'through': "orm['ralph_assets.RackAccessory']", 'symmetrical': 'False'}),
             'data_center': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['ralph_assets.DataCenter']"}),
             'deprecated_ralph_rack': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "u'deprecated_asset_rack'", 'null': 'True', 'to': "orm['discovery.Device']"}),
+            'description': ('django.db.models.fields.CharField', [], {'max_length': '250', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'max_u_height': ('django.db.models.fields.IntegerField', [], {'default': '48'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '75'}),
+            'orientation': ('django.db.models.fields.PositiveIntegerField', [], {'default': '1'}),
             'server_room': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['ralph_assets.ServerRoom']", 'null': 'True', 'blank': 'True'}),
             'visualization_col': ('django.db.models.fields.PositiveIntegerField', [], {'default': '0'}),
             'visualization_row': ('django.db.models.fields.PositiveIntegerField', [], {'default': '0'})
@@ -705,7 +849,7 @@ class Migration(SchemaMigration):
             'cache_version': ('django.db.models.fields.PositiveIntegerField', [], {'default': '0'}),
             'created': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'language': ('django.db.models.fields.CharField', [], {'default': "'en'", 'max_length': '3'}),
+            'language': ('django.db.models.fields.CharField', [], {'max_length': '3'}),
             'modified': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'report_odt_source': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "u'odt_templates'", 'to': "orm['ralph_assets.ReportOdtSource']"}),
             'template': ('django.db.models.fields.files.FileField', [], {'max_length': '100'})

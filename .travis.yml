@@ -6,10 +6,10 @@ install:
     - pip install git+https://github.com/zefciu/django-search-forms.git@develop
     - pip install git+https://github.com/quamilek/bob-ajax-selects.git@develop
     - pip install git+https://github.com/allegro/django-bob.git@develop
-    - pip install git+https://github.com/allegro/ralph@develop  --use-mirrors --allow-all-external --allow-unverified ipaddr --allow-unverified postmarkup --allow-unverified python-graph-core --allow-unverified pysphere
     - pip install coveralls
     - pip install codecov
     - pip install . --use-mirrors
+    - pip install git+https://github.com/allegro/ralph@develop  --use-mirrors --allow-all-external --allow-unverified ipaddr --allow-unverified postmarkup --allow-unverified python-graph-core --allow-unverified pysphere
 before_install:
     - pip install flake8 --use-mirrors
     - make flake

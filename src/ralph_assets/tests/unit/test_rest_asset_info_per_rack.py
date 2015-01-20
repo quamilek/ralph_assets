@@ -94,6 +94,7 @@ class TestRestAssetInfoPerRack(TestCase):
                     'position': self.asset_1.device_info.position,
                     'model': self.asset_1.model.name,
                     'children': [],
+                    'layout': u'',
                 },
                 {
                     '_type': TYPE_ASSET,
@@ -106,6 +107,7 @@ class TestRestAssetInfoPerRack(TestCase):
                     'position': self.asset_2.device_info.position,
                     'model': self.asset_2.model.name,
                     'children': [],
+                    'layout': u'',
                 },
                 {
                     '_type': TYPE_ACCESSORY,

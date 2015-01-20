@@ -53,3 +53,11 @@ class AssetsView(ACLGateway, APIView):
         devices['pdus'] = self._get_pdus(rack)
         devices['info'] = RackSerializer(rack).data
         return Response(devices)
+
+    def put(self, request, rack_id, format=None):
+        serializer = RackSerializer(
+            self.get_object(rack_id), data=request.DATA)
+        if serializer.is_valid():
+            serializer.update()
+            return Response(serializer.data)
+        return Response(serializer.errors)

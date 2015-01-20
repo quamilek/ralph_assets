@@ -214,6 +214,15 @@ class AssetCategoryType(Choices):
     data_center = _("data center")
 
 
+class ModelVisualizationLayout(Choices):
+    _ = Choices.Choice
+
+    na = _('N/A')
+    layout_1x2 = _('1x2').extra(css_class='rows-1 cols-2')
+    layout_2x8 = _('2x8').extra(css_class='rows-2 cols-8')
+    layout_2x8AB = _('2x16 (A/B)').extra(css_class='rows-2 cols-8 half-slots')
+
+
 class AssetManufacturer(
     CreatableFromString,
     TimeTrackable,
@@ -259,6 +268,12 @@ class AssetModel(
         blank=True,
         default=0,
     )
+    visualization_layout = models.PositiveIntegerField(
+        verbose_name=_("visualization layout"),
+        choices=ModelVisualizationLayout(),
+        default=ModelVisualizationLayout().na.id,
+        blank=True,
+    )
     type = models.PositiveIntegerField(choices=AssetType(), null=True)
 
     def __unicode__(self):
@@ -267,6 +282,10 @@ class AssetModel(
     @classmethod
     def create_from_string(cls, asset_type, string_name):
         return cls(type=asset_type, name=string_name)
+
+    def get_layout_class(self):
+        item = ModelVisualizationLayout.from_id(self.visualization_layout)
+        return getattr(item, 'css_class', '')
 
 
 class AssetOwner(
