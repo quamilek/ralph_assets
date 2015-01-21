@@ -1,11 +1,11 @@
 language: python
 python:
-  - "2.7"
+  - "2.7.9"
 sudo: false
 cache:
   directories:
-    - /home/virtualenv/
     - $HOME/.pip-cache/
+    - /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
     - pip install git+https://github.com/zefciu/django-search-forms.git@develop
