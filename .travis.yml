@@ -4,7 +4,7 @@ python:
 sudo: false
 cache:
   directories:
-    - /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
+    - /home/virtualenv/
     - $HOME/.pip-cache/
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
