@@ -26,7 +26,9 @@ install:
     - pip install git+https://github.com/allegro/ralph@develop  --use-mirrors --allow-all-external --allow-unverified ipaddr --allow-unverified postmarkup --allow-unverified python-graph-core --allow-unverified pysphere
 before_install:
     - pip install flake8 --use-mirrors
+    - pip install git+https://github.com/rory/django-template-i18n-lint
     - make flake
+    - make check-templates
 before_script:
   mysql -e 'CREATE DATABASE ralph CHARACTER SET utf8 COLLATE utf8_general_ci;'
 script:
